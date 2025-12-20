@@ -1,15 +1,16 @@
 """
 Lighter交易所适配器 - 基础模块
 
-提供Lighter交易所的基础配置、工具方法和数据解析功能
+提供Lighter交易所的基础配置、工具方法和数据解析功能  
 """
 
 from typing import Dict, Any, Optional, List
 from decimal import Decimal
 from datetime import datetime
-import logging
 
-logger = logging.getLogger(__name__)
+from ..utils.logger_factory import get_exchange_logger
+
+logger = get_exchange_logger("ExchangeAdapter.lighter")
 
 
 class LighterBase:
@@ -74,9 +75,21 @@ class LighterBase:
         self.testnet = config.get("testnet", False)
 
         # API 配置
-        self.api_key_private_key = config.get("api_key_private_key", "")
-        self.account_index = config.get("account_index", 0)
-        self.api_key_index = config.get("api_key_index", 0)
+        # 🔥 支持嵌套配置（从 api_config.auth 读取）或直接配置
+        api_config = config.get("api_config", {})
+        auth_config = api_config.get("auth", {}) if isinstance(api_config, dict) else {}
+        
+        # 优先从 auth 配置读取，如果没有则从顶层读取（向后兼容）
+        self.auth_enabled = auth_config.get("enabled", False) if auth_config else config.get("auth_enabled", False)
+        self.api_key_private_key = auth_config.get("api_key_private_key", "") if auth_config else config.get("api_key_private_key", "")
+        self.account_index = auth_config.get("account_index", 0) if auth_config else config.get("account_index", 0)
+        self.api_key_index = auth_config.get("api_key_index", 0) if auth_config else config.get("api_key_index", 0)
+        
+        # 🔥 auth_enabled 只控制WebSocket账户订阅，不影响REST API查询能力
+        # 如果 auth_enabled 为 False，WebSocket将不订阅账户数据，但REST API仍可使用认证信息查询余额
+        if not self.auth_enabled:
+            logger.info("ℹ️  [Lighter] WebSocket账户订阅已禁用，将只订阅公共数据（market_stats和order_book）")
+            # 🔥 注意：不清空account_index，因为REST API仍可能需要它来查询余额
 
         # URL配置
         self.base_url = self.TESTNET_URL if self.testnet else self.MAINNET_URL
@@ -85,10 +98,16 @@ class LighterBase:
         # 覆盖URL（如果配置中提供）
         if "api_url" in config:
             self.base_url = config["api_url"]
-        if "ws_url" in config:
+        
+        # 🔥 支持多种ws_url字段名（兼容不同配置格式）
+        if "ws_url" in config and config["ws_url"]:
             self.ws_url = config["ws_url"]
+        elif self.testnet and "ws_testnet_url" in config and config["ws_testnet_url"]:
+            self.ws_url = config["ws_testnet_url"]
+        elif not self.testnet and "ws_mainnet_url" in config and config["ws_mainnet_url"]:
+            self.ws_url = config["ws_mainnet_url"]
 
-        # 🔥 确保ws_url不为None
+        # 🔥 确保ws_url不为None（兜底保护）
         if not self.ws_url:
             default_ws = self.TESTNET_WS_URL if self.testnet else self.MAINNET_WS_URL
             logger.warning(f"⚠️ ws_url为空，使用默认值: {default_ws}")
@@ -97,24 +116,91 @@ class LighterBase:
         # 市场信息缓存
         self._markets_cache: Dict[int, Dict[str, Any]] = {}
         self._symbol_to_market_index: Dict[str, int] = {}
+        # 符号映射（用于兼容不同命名方式）
+        self._symbol_mapping: Dict[str, str] = {}
+        symbol_mapping_cfg = config.get("symbol_mapping")
+        if isinstance(symbol_mapping_cfg, dict):
+            self._symbol_mapping.update(symbol_mapping_cfg)
 
-        # 初始化SignerClient（用于认证和签名）
+        # 初始化SignerClient（用于REST API认证和签名）
+        # 🔥 即使auth_enabled=False，如果配置了认证信息，也初始化SignerClient用于REST API查询
+        # auth_enabled只控制WebSocket是否订阅账户数据，不影响REST API的余额查询能力
         self.signer_client = None
-        if self.api_key_private_key:
+        
+        # 🔥 优先从环境变量读取认证信息，其次使用配置文件
+        import os
+        api_key_private_key = os.getenv('LIGHTER_API_KEY_PRIVATE_KEY') or self.api_key_private_key
+        
+        env_account_index = os.getenv('LIGHTER_ACCOUNT_INDEX')
+        if env_account_index is not None:
+            account_index = int(env_account_index)
+        elif self.account_index is not None:
+            account_index = self.account_index
+        else:
+            account_index = None
+        
+        env_api_key_index = os.getenv('LIGHTER_API_KEY_INDEX')
+        if env_api_key_index is not None:
+            api_key_index = int(env_api_key_index)
+        elif self.api_key_index is not None:
+            api_key_index = self.api_key_index
+        else:
+            api_key_index = None
+        
+        if account_index is not None and api_key_private_key:
             try:
-                from lighter import SignerClient
-                self.signer_client = SignerClient(
-                    url=self.base_url,
-                    private_key=self.api_key_private_key,
-                    account_index=self.account_index,
-                    api_key_index=self.api_key_index,
+                # 更新实例属性（使用环境变量的值）
+                self.api_key_private_key = api_key_private_key
+                self.account_index = account_index
+                self.api_key_index = api_key_index
+                
+                # 兼容不同 lighter-sdk 版本的 SignerClient 参数
+                self.signer_client = self._create_signer_client(
+                    base_url=self.base_url,
+                    account_index=account_index,
+                    api_key_index=api_key_index,
+                    api_key_private_key=api_key_private_key,
                 )
-                logger.info("✅ SignerClient初始化成功")
+                
+                key_source = "环境变量" if os.getenv('LIGHTER_API_KEY_PRIVATE_KEY') else "配置文件"
+                logger.info(
+                    f"✅ [LighterBase] SignerClient初始化成功: "
+                    f"account_index={account_index}, api_key_index={api_key_index} (从{key_source})"
+                )
             except Exception as e:
-                logger.warning(f"⚠️ SignerClient初始化失败: {e}")
+                logger.warning(f"⚠️ [LighterBase] SignerClient初始化失败: {e}")
+        else:
+            logger.info("ℹ️  [LighterBase] 未配置认证信息，WebSocket将运行在公共模式")
 
         logger.info(
             f"Lighter基础配置初始化完成 - URL: {self.base_url}, 测试网: {self.testnet}")
+
+    def _create_signer_client(self, base_url: str, account_index: int, api_key_index: Optional[int], api_key_private_key: str):
+        """
+        兼容 lighter-sdk 旧/新版的 SignerClient 构造参数：
+        - 新版(>=1.0.1): 需要 api_private_keys: Dict[int, str]
+        - 旧版: 接受 private_key / api_key_index / account_index
+        """
+        from lighter import SignerClient
+
+        api_key_index_val = api_key_index if api_key_index is not None else 0
+        api_private_keys = {api_key_index_val: api_key_private_key}
+
+        try:
+            # 新版签名
+            return SignerClient(
+                url=base_url,
+                account_index=account_index,
+                api_private_keys=api_private_keys,
+            )
+        except TypeError:
+            # 兼容旧版签名
+            return SignerClient(
+                url=base_url,
+                private_key=api_key_private_key,
+                account_index=account_index,
+                api_key_index=api_key_index,
+            )
 
     def get_base_url(self) -> str:
         """获取REST API基础URL"""
@@ -131,26 +217,78 @@ class LighterBase:
         标准化交易对符号
 
         Args:
-            symbol: 原始符号，如 "BTC-USD" 或 "BTCUSD"
+            symbol: 原始符号，如 "BTC-USD", "BTCUSD", "PAXGUSD", "XAUUSD"
 
         Returns:
-            标准化后的符号，如 "BTC-USD"
+            标准化后的符号
+            
+        注意：
+        - 如果symbol已在markets缓存中，直接返回（避免破坏正确的symbol）
+        - 否则尝试自动转换为 BASE-QUOTE 格式
         """
-        # Lighter使用 BTC-USD 格式
-        symbol = symbol.upper().replace("_", "-")
+        if not symbol:
+            return symbol
+            
+        symbol_upper = symbol.upper().replace("_", "-")
 
-        if "-" not in symbol and len(symbol) > 3:
-            # 尝试分割，如 BTCUSD -> BTC-USD
-            if symbol.endswith("USD"):
-                base = symbol[:-3]
-                quote = "USD"
-                symbol = f"{base}-{quote}"
-            elif symbol.endswith("USDT"):
-                base = symbol[:-4]
-                quote = "USDT"
-                symbol = f"{base}-{quote}"
+        def _match_candidate(candidate: str) -> Optional[str]:
+            if not candidate:
+                return None
+            if candidate in self._symbol_to_market_index or candidate in self._markets_cache:
+                return candidate
+            return None
 
-        return symbol
+        match = _match_candidate(symbol_upper)
+        if match:
+            return match
+
+        candidates = []
+
+        # 无分隔符情况，例如 PAXGUSD
+        if "-" not in symbol_upper and len(symbol_upper) > 3:
+            if symbol_upper.endswith("USD"):
+                base = symbol_upper[:-3]
+                candidates.append(f"{base}-USD")
+                candidates.append(f"{base}USD")
+            elif symbol_upper.endswith("USDC"):
+                base = symbol_upper[:-4]
+                candidates.append(f"{base}-USDC")
+                candidates.append(f"{base}USDC")
+            elif symbol_upper.endswith("USDT"):
+                base = symbol_upper[:-4]
+                candidates.append(f"{base}-USDT")
+                candidates.append(f"{base}USDT")
+
+        suffixes = ["-USD-PERP", "-USDC-PERP", "-USD", "-USDC", "-USDT"]
+        for suffix in suffixes:
+            if symbol_upper.endswith(suffix):
+                base = symbol_upper[: -len(suffix)]
+                if not base:
+                    continue
+                if "PERP" in suffix:
+                    candidates.extend([
+                        base,
+                        f"{base}USD",
+                        f"{base}-USD",
+                        f"{base}USDC",
+                        f"{base}-USDC",
+                        f"{base}USDT",
+                        f"{base}-USDT",
+                    ])
+                else:
+                    quote = suffix.replace("-", "")
+                    candidates.extend([
+                        f"{base}-{quote}",
+                        f"{base}{quote}"
+                    ])
+
+        candidates.append(symbol_upper)
+        for candidate in candidates:
+            match = _match_candidate(candidate)
+            if match:
+                return match
+
+        return symbol_upper
 
     def get_market_index(self, symbol: str) -> Optional[int]:
         """
@@ -162,8 +300,45 @@ class LighterBase:
         Returns:
             市场索引，如果不存在返回None
         """
+        if not symbol:
+            return None
+
+        # 特殊直连映射：已知 ETH/USDC 现货 market_id=2048
+        symbol_upper = symbol.upper().replace(":", "/").replace("-", "/")
+        # 现货标准格式可能带有 SPOT 后缀，先去掉再匹配
+        symbol_upper_clean = symbol_upper
+        for suffix in ("/SPOT", "-SPOT", "SPOT"):
+            if symbol_upper_clean.endswith(suffix):
+                symbol_upper_clean = symbol_upper_clean[: -len(suffix)]
+                if symbol_upper_clean.endswith("/"):
+                    symbol_upper_clean = symbol_upper_clean[:-1]
+                break
+        if symbol_upper in {"ETH/USDC", "ETHUSDC", "ETH-USD", "ETHUSD"}:
+            return 2048
+        if symbol_upper_clean in {"ETH/USDC", "ETHUSDC", "ETH-USD", "ETHUSD"}:
+            return 2048
+
         normalized = self.normalize_symbol(symbol)
-        return self._symbol_to_market_index.get(normalized)
+        mapped = self._symbol_mapping.get(symbol) or self._symbol_mapping.get(normalized)
+        if mapped:
+            normalized = self.normalize_symbol(mapped)
+            logger.debug(f"🔄 符号映射: {symbol} -> {normalized}")
+
+        market_index = self._symbol_to_market_index.get(normalized)
+        if market_index is None:
+            # 尝试直接匹配基础币种
+            base = normalized.split('-')[0] if '-' in normalized else normalized
+            market_index = self._symbol_to_market_index.get(base)
+            
+            # 🔥 添加详细日志来诊断查找失败
+            logger.warning(
+                f"❌ 未找到市场索引: symbol={symbol}, normalized={normalized}, "
+                f"base={base}, cached_keys={list(self._symbol_to_market_index.keys())[:5]}"
+            )
+        else:
+            logger.debug(f"✅ 找到市场索引: {symbol} -> {market_index}")
+
+        return market_index
 
     def update_markets_cache(self, markets: List[Dict[str, Any]]):
         """

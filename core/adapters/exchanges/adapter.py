@@ -52,21 +52,33 @@ class ExchangeAdapter(ExchangeInterface):
         
         # 修复：使用统一的日志服务而不是直接创建logger
         try:
-            from core.infrastructure.logging import get_logger
-            self.logger = get_logger("exchanges", f"ExchangeAdapter.{config.exchange_id}")
+            from core.logging import get_logger
+            self.logger = get_logger(f"ExchangeAdapter.{config.exchange_id}")
         except ImportError:
-            # 回退到基本配置，但确保有正确的格式化器
+            # 回退到基本配置，只写入文件，不输出到控制台
             self.logger = logging.getLogger(f"ExchangeAdapter.{config.exchange_id}")
             if not self.logger.handlers:
-                # 添加控制台处理器和格式化器
-                handler = logging.StreamHandler()
-                formatter = logging.Formatter(
-                    '[%(asctime)s] %(levelname)-8s %(name)-20s | %(message)s',
-                    datefmt='%H:%M:%S'
+                # 🔥 只添加文件处理器，不添加控制台处理器
+                from logging.handlers import RotatingFileHandler
+                from pathlib import Path
+                
+                log_dir = Path("logs")
+                log_dir.mkdir(parents=True, exist_ok=True)
+                
+                file_handler = RotatingFileHandler(
+                    log_dir / "ExchangeAdapter.log",
+                    maxBytes=5*1024*1024,
+                    backupCount=3,
+                    encoding='utf-8'
                 )
-                handler.setFormatter(formatter)
-                self.logger.addHandler(handler)
+                file_handler.setLevel(logging.INFO)
+                formatter = logging.Formatter(
+                    '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s'
+                )
+                file_handler.setFormatter(formatter)
+                self.logger.addHandler(file_handler)
                 self.logger.setLevel(logging.INFO)
+                # 🔥 关键：阻止日志传播到父logger
                 self.logger.propagate = False
 
         # 连接管理
@@ -446,6 +458,17 @@ class ExchangeAdapter(ExchangeInterface):
             self.logger.info(f"订单已取消: {order_data.id}@{self.config.exchange_id}")
         else:
             self.logger.debug(f"订单状态更新: {order_data.id}@{self.config.exchange_id}, 状态: {order_data.status.value}")
+
+    async def _handle_trade_update(self, trade_data: TradeData) -> None:
+        """处理成交更新"""
+        self.logger.debug(
+            f"成交更新: {trade_data.symbol}@{self.config.exchange_id}, "
+            f"价格: {trade_data.price}, 数量: {trade_data.amount}"
+        )
+
+    async def _handle_user_data_update(self, data: Dict[str, Any]) -> None:
+        """处理用户数据更新"""
+        self.logger.debug(f"用户数据更新@{self.config.exchange_id}: {data.get('type', 'unknown')}")
 
     # === 抽象方法（子类必须实现） ===
 

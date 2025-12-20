@@ -139,16 +139,65 @@ edgex:
   # API配置
   api:
     base_url: "https://pro.edgex.exchange/"
-    ws_url: "wss://quote.edgex.exchange/api/v1/public/ws"
+    ws_url: "wss://quote.edgex.exchange/api/v1/public/ws"  # 公共WebSocket（市场数据）
+    private_ws_url: "wss://quote.edgex.exchange/api/v1/private/ws"  # 私有WebSocket（订单/持仓，认证后推送；官方建议使用 quote 域名 不能使用pro域名）
     version: "v1"
     timeout: 30
     
-  # 认证配置
+  # ========================================
+  # 🔐 认证配置（✅ 已修正）
+  # ========================================
   authentication:
-    method: "hmac_sha256"
-    api_key: ""  # 在运行时设置
-    api_secret: ""  # 在运行时设置
+    # EdgeX使用ECDSA签名算法 + SHA3哈希
+    # ⚠️ 不是HMAC-SHA256！
+    method: "ecdsa_sha3"  # ✅ 修正：ECDSA + SHA3
     
+    # ========================================
+    # 🔑 认证凭据来源：环境变量（推荐）
+    # ========================================
+    # EdgeX认证需要以下凭据：
+    # 1. Account ID - 您的EdgeX账户ID
+    # 2. Stark Private Key - StarkEx L2私钥
+    #
+    # 📝 配置方式：
+    # 请设置以下环境变量：
+    #
+    #   export EDGEX_ACCOUNT_ID="your_account_id"
+    #   export EDGEX_STARK_PRIVATE_KEY="your_stark_private_key"
+    #
+    # 🔍 如何获取Stark Private Key：
+    # 1. 登录EdgeX交易所: https://pro.edgex.exchange
+    # 2. 进入"API管理"或"密钥管理"页面
+    # 3. 生成或查看您的Stark Private Key
+    # 4. Account ID通常在账户信息中显示
+    #
+    # ⚠️ 安全警告：
+    # - 请勿将私钥直接写入配置文件！
+    # - 请勿将私钥提交到版本控制系统！
+    # - 建议使用环境变量或密钥管理服务
+    # - 定期轮换您的私钥
+    #
+    # ========================================
+    
+    # 📌 密钥已迁移到环境变量（.env 文件）：
+    #    EDGEX_ACCOUNT_ID - 账户ID
+    #    EDGEX_STARK_PRIVATE_KEY - Stark 私钥
+    account_id: ""           # 留空，使用环境变量 EDGEX_ACCOUNT_ID
+    stark_private_key: ""    # 留空，使用环境变量 EDGEX_STARK_PRIVATE_KEY
+    
+    # SDK配置
+    use_official_sdk: true   # 使用EdgeX官方SDK处理签名
+    # EdgeX官方SDK会自动处理：
+    # - ECDSA签名算法
+    # - SHA3哈希
+    # - 请求头（X-edgeX-Api-Signature, X-edgeX-Api-Timestamp）
+    # - 签名内容格式（timestamp + method + path + params）
+    
+  # 余额刷新配置
+  balance_refresh:
+    use_websocket: false              # 🔥 是否使用 WebSocket 获取余额（false=使用REST）
+    rest_interval: 60                 # 🔥 REST API 余额刷新间隔（秒）
+  
   # 频率限制
   rate_limits:
     rest_api: 100  # 每秒REST API请求数

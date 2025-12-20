@@ -56,6 +56,9 @@ class ExchangeFactory:
             from .adapters.binance import BinanceAdapter
             from .adapters.edgex import EdgeXAdapter
             from .adapters.lighter import LighterAdapter
+            from .adapters.paradex import ParadexAdapter
+            from .adapters.variational import VariationalAdapter
+            from .adapters.grvt import GRVTAdapter
 
             # 注册Hyperliquid适配器
             self.register_adapter(
@@ -170,6 +173,90 @@ class ExchangeFactory:
                         "trading": {"max_requests": 10, "time_window": 60}
                     }
                 }
+            )
+
+            # 注册Paradex适配器
+            self.register_adapter(
+                exchange_id="paradex",
+                adapter_class=ParadexAdapter,
+                exchange_type=ExchangeType.PERPETUAL,
+                name="Paradex",
+                description="Paradex永续合约交易所",
+                supported_features=[
+                    "perpetual_trading", "websocket", "orderbook",
+                    "ticker", "trades", "user_data"
+                ],
+                default_config={
+                    "testnet": False,
+                    "default_leverage": 1,
+                    "enable_websocket": True,
+                    "rate_limits": {
+                        "ticker": {"max_requests": 100, "time_window": 60},
+                        "orderbook": {"max_requests": 100, "time_window": 60},
+                        "trading": {"max_requests": 20, "time_window": 60}
+                    }
+                }
+            )
+
+            # 注册Variational适配器（仅行情BBO：/api/quotes/indicative）
+            self.register_adapter(
+                exchange_id="variational",
+                adapter_class=VariationalAdapter,
+                exchange_type=ExchangeType.PERPETUAL,
+                name="Variational Omni",
+                description="Variational Omni 永续合约（当前仅支持 BBO 行情）",
+                supported_features=[
+                    "ticker",
+                    "bbo_quote",
+                ],
+                default_config={
+                    "testnet": False,
+                    "enable_websocket": False,
+                    "rate_limits": {
+                        "ticker": {"max_requests": 60, "time_window": 60},
+                    },
+                    "extra_params": {
+                        # 可在你的配置中覆盖
+                        "base_url": "https://omni.variational.io",
+                        "funding_interval_s": 3600,
+                        "settlement_asset": "USDC",
+                        "instrument_type": "perpetual_future",
+                        "indicative_quote_qty": "0.001",
+                    },
+                },
+            )
+
+            # 注册GRVT适配器
+            self.register_adapter(
+                exchange_id="grvt",
+                adapter_class=GRVTAdapter,
+                exchange_type=ExchangeType.PERPETUAL,
+                name="GRVT",
+                description="GRVT 去中心化永续合约交易所",
+                supported_features=[
+                    "perpetual_trading",
+                    "websocket",
+                    "orderbook",
+                    "ticker",
+                    "trades",
+                    "user_data",
+                ],
+                default_config={
+                    "testnet": True,
+                    "default_leverage": 1,
+                    "enable_websocket": True,
+                    "rate_limits": {
+                        "ticker": {"max_requests": 60, "time_window": 60},
+                        "orderbook": {"max_requests": 60, "time_window": 60},
+                        "trading": {"max_requests": 20, "time_window": 60},
+                    },
+                    "extra_params": {
+                        # GRVT env: prod/testnet/dev/stg
+                        "env": "testnet",
+                        # Trading sub-account id (uint64 in GRVT)
+                        "sub_account_id": "",
+                    },
+                },
             )
 
             self.logger.info("内置交易所适配器注册完成")

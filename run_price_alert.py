@@ -7,11 +7,17 @@
 - Rich终端表格显示实时数据
 """
 
+# 🔥 加载环境变量（必须在其他导入之前）
+from dotenv import load_dotenv
+from pathlib import Path
+env_path = Path(__file__).parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+
 import asyncio
 import sys
 import signal
 import yaml
-from pathlib import Path
 from datetime import datetime
 from rich.console import Console
 from rich.table import Table

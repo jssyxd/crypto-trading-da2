@@ -1,0 +1,6038 @@
+{
+  "updated_at": "2025-11-13T22:47:10.613572",
+  "total_markets": 232,
+  "markets": [
+    {
+      "symbol": "BTCUSD",
+      "base_token": {
+        "symbol": "BTC"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000001",
+      "is_active": true,
+      "daily_volume_base": 37464.434,
+      "daily_volume_quote": 3840587153.2744,
+      "daily_trades_count": 374517,
+      "last_trade_price": 101810.2,
+      "daily_high": 104823.4,
+      "daily_low": 100716.2,
+      "daily_price_change_pct": -0.027162,
+      "funding_rate": 0.0001,
+      "open_interest": 4916.348,
+      "tick_size": "0.1",
+      "step_size": "0.001",
+      "min_order_size": "0.001",
+      "max_order_size": "50",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ETHUSD",
+      "base_token": {
+        "symbol": "ETH"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000002",
+      "is_active": true,
+      "daily_volume_base": 576092.64,
+      "daily_volume_quote": 1992222846.884,
+      "daily_trades_count": 127238,
+      "last_trade_price": 3408.38,
+      "daily_high": 3564.6,
+      "daily_low": 3370.04,
+      "daily_price_change_pct": -0.038918,
+      "funding_rate": 0.0001,
+      "open_interest": 63067.65,
+      "tick_size": "0.01",
+      "step_size": "0.01",
+      "min_order_size": "0.02",
+      "max_order_size": "1500",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "SOLUSD",
+      "base_token": {
+        "symbol": "SOL"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000003",
+      "is_active": true,
+      "daily_volume_base": 3249697.3,
+      "daily_volume_quote": 502118524.095,
+      "daily_trades_count": 83076,
+      "last_trade_price": 152.78,
+      "daily_high": 160.17,
+      "daily_low": 150.31,
+      "daily_price_change_pct": -0.043451,
+      "funding_rate": 0.0001,
+      "open_interest": 343670.5,
+      "tick_size": "0.01",
+      "step_size": "0.1",
+      "min_order_size": "0.3",
+      "max_order_size": "13600",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "BNB2USD",
+      "base_token": {
+        "symbol": "BNB2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000004",
+      "is_active": true,
+      "daily_volume_base": 29.99,
+      "daily_volume_quote": 28678.5343,
+      "daily_trades_count": 110,
+      "last_trade_price": 967.71,
+      "daily_high": 967.71,
+      "daily_low": 941.47,
+      "daily_price_change_pct": 0.013531,
+      "funding_rate": 0.0001,
+      "open_interest": 0.7,
+      "tick_size": "0.01",
+      "step_size": "0.01",
+      "min_order_size": "0.01",
+      "max_order_size": "500.00",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "LTC2USD",
+      "base_token": {
+        "symbol": "LTC2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000005",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 95.32,
+      "daily_high": 95.45,
+      "daily_low": 94.87,
+      "daily_price_change_pct": 0.034175,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.01",
+      "step_size": "0.1",
+      "min_order_size": "0.1",
+      "max_order_size": "700.0",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "LINK2USD",
+      "base_token": {
+        "symbol": "LINK2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000006",
+      "is_active": true,
+      "daily_volume_base": 422.5,
+      "daily_volume_quote": 6507.9123,
+      "daily_trades_count": 87,
+      "last_trade_price": 15.655,
+      "daily_high": 15.88,
+      "daily_low": 15.058,
+      "daily_price_change_pct": 0.018807,
+      "funding_rate": 0.0001,
+      "open_interest": 1.0,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "10000.0",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "AVAX2USD",
+      "base_token": {
+        "symbol": "AVAX2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000007",
+      "is_active": true,
+      "daily_volume_base": 710.3,
+      "daily_volume_quote": 12131.0928,
+      "daily_trades_count": 102,
+      "last_trade_price": 17.217,
+      "daily_high": 17.46,
+      "daily_low": 16.758,
+      "daily_price_change_pct": 0.002737,
+      "funding_rate": 0.0001,
+      "open_interest": 0.3,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "5000.0",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "MATICUSD",
+      "base_token": {
+        "symbol": "MATIC"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000008",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "15",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "XRP2USD",
+      "base_token": {
+        "symbol": "XRP2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000009",
+      "is_active": true,
+      "daily_volume_base": 15908.0,
+      "daily_volume_quote": 38625.8081,
+      "daily_trades_count": 91,
+      "last_trade_price": 2.4801,
+      "daily_high": 2.4975,
+      "daily_low": 2.3356,
+      "daily_price_change_pct": 0.041009,
+      "funding_rate": 0.0001,
+      "open_interest": 96.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "10",
+      "max_order_size": "50000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "DOGE2USD",
+      "base_token": {
+        "symbol": "DOGE2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000010",
+      "is_active": true,
+      "daily_volume_base": 40953.0,
+      "daily_volume_quote": 7042.70928,
+      "daily_trades_count": 59,
+      "last_trade_price": 0.17593,
+      "daily_high": 0.17593,
+      "daily_low": 0.16884,
+      "daily_price_change_pct": 0.023622,
+      "funding_rate": 0.0001,
+      "open_interest": 400.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "50",
+      "max_order_size": "500000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "1000PEPE2USD",
+      "base_token": {
+        "symbol": "1000PEPE2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000011",
+      "is_active": true,
+      "daily_volume_base": 1209500.0,
+      "daily_volume_quote": 7025.23702,
+      "daily_trades_count": 103,
+      "last_trade_price": 0.0059013,
+      "daily_high": 0.0059013,
+      "daily_low": 0.0057026,
+      "daily_price_change_pct": 0.012195,
+      "funding_rate": 0.0001,
+      "open_interest": 1000.0,
+      "tick_size": "0.0000001",
+      "step_size": "100",
+      "min_order_size": "500",
+      "max_order_size": "5000000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "AAVE2USD",
+      "base_token": {
+        "symbol": "AAVE2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000012",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.01",
+      "step_size": "0.1",
+      "min_order_size": "0.1",
+      "max_order_size": "750",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "TRX2USD",
+      "base_token": {
+        "symbol": "TRX2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000013",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.35322,
+      "daily_high": 0.35988,
+      "daily_low": 0.35322,
+      "daily_price_change_pct": 0.078468,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "30",
+      "max_order_size": "250000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "SUI2USD",
+      "base_token": {
+        "symbol": "SUI2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000014",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 3.4777,
+      "daily_high": 3.4777,
+      "daily_low": 3.4773,
+      "daily_price_change_pct": -0.074981,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "3",
+      "max_order_size": "30000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "WIF2USD",
+      "base_token": {
+        "symbol": "WIF2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000015",
+      "is_active": true,
+      "daily_volume_base": 4963.0,
+      "daily_volume_quote": 2259.8034,
+      "daily_trades_count": 37,
+      "last_trade_price": 0.4629,
+      "daily_high": 0.4665,
+      "daily_low": 0.4483,
+      "daily_price_change_pct": -0.016779,
+      "funding_rate": 0.0001,
+      "open_interest": 11.3,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "3",
+      "max_order_size": "150000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "TIA2USD",
+      "base_token": {
+        "symbol": "TIA2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000016",
+      "is_active": true,
+      "daily_volume_base": 5536.0,
+      "daily_volume_quote": 5137.8791,
+      "daily_trades_count": 37,
+      "last_trade_price": 0.9445,
+      "daily_high": 0.9445,
+      "daily_low": 0.9152,
+      "daily_price_change_pct": -0.003481,
+      "funding_rate": 0.0001,
+      "open_interest": 2.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "TON2USD",
+      "base_token": {
+        "symbol": "TON2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000017",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 6.2919,
+      "daily_high": 6.3225,
+      "daily_low": 6.2884,
+      "daily_price_change_pct": 0.035788,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "LDO2USD",
+      "base_token": {
+        "symbol": "LDO2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000018",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 1.6915,
+      "daily_high": 1.7008,
+      "daily_low": 1.6845,
+      "daily_price_change_pct": 0.062366,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "5",
+      "max_order_size": "100000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "ARB2USD",
+      "base_token": {
+        "symbol": "ARB2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000019",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.6964,
+      "daily_high": 0.7559,
+      "daily_low": 0.6709,
+      "daily_price_change_pct": 0.00986,
+      "funding_rate": 0.00718,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "10",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "OP2USD",
+      "base_token": {
+        "symbol": "OP2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000020",
+      "is_active": true,
+      "daily_volume_base": 4683.9,
+      "daily_volume_quote": 1873.82641,
+      "daily_trades_count": 25,
+      "last_trade_price": 0.4131,
+      "daily_high": 0.4147,
+      "daily_low": 0.3959,
+      "daily_price_change_pct": 0.001211,
+      "funding_rate": 0.0001,
+      "open_interest": 5.7,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "3",
+      "max_order_size": "120000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "ORDI2USD",
+      "base_token": {
+        "symbol": "ORDI2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000021",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 8.809,
+      "daily_high": 8.892,
+      "daily_low": 8.557,
+      "daily_price_change_pct": 0.01568,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "0.2",
+      "max_order_size": "2500",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "JTO2USD",
+      "base_token": {
+        "symbol": "JTO2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000022",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 2.8352,
+      "daily_high": 3.06,
+      "daily_low": 2.8063,
+      "daily_price_change_pct": -0.036236,
+      "funding_rate": 0.00718,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "3",
+      "max_order_size": "50000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "JUP2USD",
+      "base_token": {
+        "symbol": "JUP2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000023",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.5203,
+      "daily_high": 0.5203,
+      "daily_low": 0.5203,
+      "daily_price_change_pct": 0.036867,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "6",
+      "max_order_size": "120000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "UNI2USD",
+      "base_token": {
+        "symbol": "UNI2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000024",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 10.035,
+      "daily_high": 10.128,
+      "daily_low": 9.773,
+      "daily_price_change_pct": 0.011388,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "15000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "ATOM2USD",
+      "base_token": {
+        "symbol": "ATOM2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000027",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 8.17,
+      "daily_high": 8.179,
+      "daily_low": 8.123,
+      "daily_price_change_pct": 0.034046,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "25000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "NEAR2USD",
+      "base_token": {
+        "symbol": "NEAR2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000029",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 5.399,
+      "daily_high": 5.443,
+      "daily_low": 5.384,
+      "daily_price_change_pct": 0.134005,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "25000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "1000SATSUSD",
+      "base_token": {
+        "symbol": "1000SATS"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000030",
+      "is_active": true,
+      "daily_volume_base": 408600.0,
+      "daily_volume_quote": 8.9892,
+      "daily_trades_count": 1,
+      "last_trade_price": 2.2e-05,
+      "daily_high": 2.2e-05,
+      "daily_low": 2.2e-05,
+      "daily_price_change_pct": -0.026548,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0000001",
+      "step_size": "100",
+      "min_order_size": "15000",
+      "max_order_size": "300000000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "ONDO2USD",
+      "base_token": {
+        "symbol": "ONDO2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000031",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.9229,
+      "daily_high": 0.924,
+      "daily_low": 0.9097,
+      "daily_price_change_pct": 0.162635,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "8",
+      "max_order_size": "100000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "APEUSD",
+      "base_token": {
+        "symbol": "APE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000032",
+      "is_active": true,
+      "daily_volume_base": 8297.0,
+      "daily_volume_quote": 3100.2006,
+      "daily_trades_count": 32,
+      "last_trade_price": 0.3769,
+      "daily_high": 0.3791,
+      "daily_low": 0.3668,
+      "daily_price_change_pct": -0.013609,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "100000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "CRV2USD",
+      "base_token": {
+        "symbol": "CRV2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000033",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.8543,
+      "daily_high": 0.8555,
+      "daily_low": 0.838,
+      "daily_price_change_pct": -0.065623,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "500000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "AEVOUSD",
+      "base_token": {
+        "symbol": "AEVO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000034",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.3869,
+      "daily_high": 0.3877,
+      "daily_low": 0.3852,
+      "daily_price_change_pct": 0.064374,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "400000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "ENS2USD",
+      "base_token": {
+        "symbol": "ENS2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000035",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 19.918,
+      "daily_high": 19.936,
+      "daily_low": 19.79,
+      "daily_price_change_pct": -0.021901,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "0.1",
+      "max_order_size": "10000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "DOT2USD",
+      "base_token": {
+        "symbol": "DOT2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000036",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 8.248,
+      "daily_high": 8.254,
+      "daily_low": 8.213,
+      "daily_price_change_pct": 0.018648,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "30000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "FET2USD",
+      "base_token": {
+        "symbol": "FET2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000037",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 1.5283,
+      "daily_high": 1.5292,
+      "daily_low": 1.5197,
+      "daily_price_change_pct": 0.019954,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "150000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "WLD2USD",
+      "base_token": {
+        "symbol": "WLD2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000038",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 2.3788,
+      "daily_high": 2.3863,
+      "daily_low": 2.3753,
+      "daily_price_change_pct": -0.008585,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "70000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "ENA2USD",
+      "base_token": {
+        "symbol": "ENA2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000039",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.6224,
+      "daily_high": 0.6238,
+      "daily_low": 0.6045,
+      "daily_price_change_pct": 0.080367,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "3",
+      "max_order_size": "350000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "DYDXUSD",
+      "base_token": {
+        "symbol": "DYDX"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000040",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 1.259,
+      "daily_high": 1.261,
+      "daily_low": 1.25,
+      "daily_price_change_pct": 0.0072,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "150000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "APT2USD",
+      "base_token": {
+        "symbol": "APT2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000041",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 11.3922,
+      "daily_high": 11.3943,
+      "daily_low": 11.2323,
+      "daily_price_change_pct": 0.008462,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "0.1",
+      "max_order_size": "50000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "ADA2USD",
+      "base_token": {
+        "symbol": "ADA2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000042",
+      "is_active": true,
+      "daily_volume_base": 8432.0,
+      "daily_volume_quote": 4654.6481,
+      "daily_trades_count": 63,
+      "last_trade_price": 0.5652,
+      "daily_high": 0.5652,
+      "daily_low": 0.5429,
+      "daily_price_change_pct": 0.012721,
+      "funding_rate": 0.0001,
+      "open_interest": 4.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "3",
+      "max_order_size": "120000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "SEI2USD",
+      "base_token": {
+        "symbol": "SEI2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000043",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.4873,
+      "daily_high": 0.4877,
+      "daily_low": 0.4792,
+      "daily_price_change_pct": 0.024169,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "3",
+      "max_order_size": "400000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "MEMEUSD",
+      "base_token": {
+        "symbol": "MEME"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000044",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.003119,
+      "daily_high": 0.003269,
+      "daily_low": 0.003046,
+      "daily_price_change_pct": -0.022257,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.000001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "10000000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "PNUT2USD",
+      "base_token": {
+        "symbol": "PNUT2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000045",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "50",
+      "max_order_size": "500000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "MOVEUSD",
+      "base_token": {
+        "symbol": "MOVE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000046",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "50",
+      "max_order_size": "500000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "TRUMP2USD",
+      "base_token": {
+        "symbol": "TRUMP2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000047",
+      "is_active": true,
+      "daily_volume_base": 2387.77,
+      "daily_volume_quote": 18058.82552,
+      "daily_trades_count": 80,
+      "last_trade_price": 7.564,
+      "daily_high": 7.651,
+      "daily_low": 7.404,
+      "daily_price_change_pct": -0.017151,
+      "funding_rate": -7.68e-06,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "4000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "MELANIAUSD",
+      "base_token": {
+        "symbol": "MELANIA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000048",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.21,
+      "daily_high": 0.212,
+      "daily_low": 0.204,
+      "daily_price_change_pct": 0.009615,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.001",
+      "step_size": "0.01",
+      "min_order_size": "5",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "PENGU2USD",
+      "base_token": {
+        "symbol": "PENGU2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000049",
+      "is_active": true,
+      "daily_volume_base": 652674.0,
+      "daily_volume_quote": 9388.170091,
+      "daily_trades_count": 94,
+      "last_trade_price": 0.014601,
+      "daily_high": 0.014741,
+      "daily_low": 0.014142,
+      "daily_price_change_pct": -0.01491,
+      "funding_rate": -0.000265,
+      "open_interest": 1550.0,
+      "tick_size": "0.000001",
+      "step_size": "1",
+      "min_order_size": "1000",
+      "max_order_size": "4000000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "VIRTUAL2USD",
+      "base_token": {
+        "symbol": "VIRTUAL2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000050",
+      "is_active": true,
+      "daily_volume_base": 3441.6,
+      "daily_volume_quote": 4404.0413,
+      "daily_trades_count": 69,
+      "last_trade_price": 1.284,
+      "daily_high": 1.3096,
+      "daily_low": 1.2503,
+      "daily_price_change_pct": -0.05796,
+      "funding_rate": 2.84e-06,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "10",
+      "max_order_size": "50000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "KAITO2USD",
+      "base_token": {
+        "symbol": "KAITO2"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000051",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 1.7324,
+      "daily_high": 1.8165,
+      "daily_low": 1.7072,
+      "daily_price_change_pct": 0.041857,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "0.0001",
+      "min_order_size": "5",
+      "max_order_size": "100000",
+      "default_taker_fee_rate": "0.00048",
+      "default_maker_fee_rate": "0.0002"
+    },
+    {
+      "symbol": "TRUMPUSD",
+      "base_token": {
+        "symbol": "TRUMP"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000052",
+      "is_active": true,
+      "daily_volume_base": 160939.8,
+      "daily_volume_quote": 1216094.8918,
+      "daily_trades_count": 3286,
+      "last_trade_price": 7.503,
+      "daily_high": 7.822,
+      "daily_low": 7.359,
+      "daily_price_change_pct": -0.040291,
+      "funding_rate": 0.0001,
+      "open_interest": 409711.4,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "5",
+      "max_order_size": "12000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TRXUSD",
+      "base_token": {
+        "symbol": "TRX"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000053",
+      "is_active": true,
+      "daily_volume_base": 9254496.0,
+      "daily_volume_quote": 2746245.27716,
+      "daily_trades_count": 3474,
+      "last_trade_price": 0.29665,
+      "daily_high": 0.29975,
+      "daily_low": 0.29331,
+      "daily_price_change_pct": -0.00839,
+      "funding_rate": -9.548e-05,
+      "open_interest": 6083665.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "200",
+      "max_order_size": "2000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "LINKUSD",
+      "base_token": {
+        "symbol": "LINK"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000054",
+      "is_active": true,
+      "daily_volume_base": 377627.66,
+      "daily_volume_quote": 5833508.81529,
+      "daily_trades_count": 3457,
+      "last_trade_price": 15.367,
+      "daily_high": 16.045,
+      "daily_low": 14.917,
+      "daily_price_change_pct": -0.042017,
+      "funding_rate": 0.0001,
+      "open_interest": 208107.14,
+      "tick_size": "0.001",
+      "step_size": "0.01",
+      "min_order_size": "3",
+      "max_order_size": "40000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "LTCUSD",
+      "base_token": {
+        "symbol": "LTC"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000055",
+      "is_active": true,
+      "daily_volume_base": 33735.5,
+      "daily_volume_quote": 3330098.305,
+      "daily_trades_count": 3260,
+      "last_trade_price": 100.38,
+      "daily_high": 102.61,
+      "daily_low": 95.0,
+      "daily_price_change_pct": -0.020969,
+      "funding_rate": 0.0001,
+      "open_interest": 23209.1,
+      "tick_size": "0.01",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "2000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "CRVUSD",
+      "base_token": {
+        "symbol": "CRV"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000056",
+      "is_active": true,
+      "daily_volume_base": 1307950.6,
+      "daily_volume_quote": 604220.0602,
+      "daily_trades_count": 3089,
+      "last_trade_price": 0.467,
+      "daily_high": 0.482,
+      "daily_low": 0.445,
+      "daily_price_change_pct": -0.029106,
+      "funding_rate": 0.0001,
+      "open_interest": 2017961.2,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "50",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ARBUSD",
+      "base_token": {
+        "symbol": "ARB"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000057",
+      "is_active": true,
+      "daily_volume_base": 4348018.7,
+      "daily_volume_quote": 1145958.41147,
+      "daily_trades_count": 3133,
+      "last_trade_price": 0.2636,
+      "daily_high": 0.2762,
+      "daily_low": 0.2566,
+      "daily_price_change_pct": -0.044581,
+      "funding_rate": 0.0001,
+      "open_interest": 3751967.2,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "150",
+      "max_order_size": "700000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "OPUSD",
+      "base_token": {
+        "symbol": "OP"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000058",
+      "is_active": true,
+      "daily_volume_base": 2643784.0,
+      "daily_volume_quote": 1079031.13387,
+      "daily_trades_count": 3117,
+      "last_trade_price": 0.4147,
+      "daily_high": 0.4276,
+      "daily_low": 0.3922,
+      "daily_price_change_pct": -0.02926,
+      "funding_rate": 0.0001,
+      "open_interest": 1775893.9,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "100",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ENAUSD",
+      "base_token": {
+        "symbol": "ENA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000059",
+      "is_active": true,
+      "daily_volume_base": 86486194.0,
+      "daily_volume_quote": 27038607.046,
+      "daily_trades_count": 24929,
+      "last_trade_price": 0.3094,
+      "daily_high": 0.329,
+      "daily_low": 0.3011,
+      "daily_price_change_pct": -0.057282,
+      "funding_rate": 0.0001,
+      "open_interest": 4511649.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "200",
+      "max_order_size": "1000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "1000SHIBUSD",
+      "base_token": {
+        "symbol": "1000SHIB"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000060",
+      "is_active": true,
+      "daily_volume_base": 140701071.0,
+      "daily_volume_quote": 1359634.294561,
+      "daily_trades_count": 3518,
+      "last_trade_price": 0.009692,
+      "daily_high": 0.009934,
+      "daily_low": 0.009437,
+      "daily_price_change_pct": -0.021701,
+      "funding_rate": 0.0001,
+      "open_interest": 16179365.0,
+      "tick_size": "0.000001",
+      "step_size": "1",
+      "min_order_size": "5000",
+      "max_order_size": "12000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "1000BONKUSD",
+      "base_token": {
+        "symbol": "1000BONK"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000061",
+      "is_active": true,
+      "daily_volume_base": 59672197.0,
+      "daily_volume_quote": 731046.530228,
+      "daily_trades_count": 3347,
+      "last_trade_price": 0.012144,
+      "daily_high": 0.012924,
+      "daily_low": 0.011941,
+      "daily_price_change_pct": -0.058312,
+      "funding_rate": 0.0001,
+      "open_interest": 5785540.0,
+      "tick_size": "0.000001",
+      "step_size": "1",
+      "min_order_size": "1500",
+      "max_order_size": "12000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "JUPUSD",
+      "base_token": {
+        "symbol": "JUP"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000062",
+      "is_active": true,
+      "daily_volume_base": 2944761.0,
+      "daily_volume_quote": 992652.8042,
+      "daily_trades_count": 3249,
+      "last_trade_price": 0.3339,
+      "daily_high": 0.3518,
+      "daily_low": 0.3267,
+      "daily_price_change_pct": -0.047904,
+      "funding_rate": 0.0001,
+      "open_interest": 992555.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "BERAUSD",
+      "base_token": {
+        "symbol": "BERA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000063",
+      "is_active": true,
+      "daily_volume_base": 193574.5,
+      "daily_volume_quote": 308733.5573,
+      "daily_trades_count": 3005,
+      "last_trade_price": 1.578,
+      "daily_high": 1.672,
+      "daily_low": 1.545,
+      "daily_price_change_pct": -0.010037,
+      "funding_rate": 0.0001,
+      "open_interest": 1094534.5,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "50",
+      "max_order_size": "12000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "BNBUSD",
+      "base_token": {
+        "symbol": "BNB"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000064",
+      "is_active": true,
+      "daily_volume_base": 130261.9,
+      "daily_volume_quote": 124861648.6584,
+      "daily_trades_count": 51942,
+      "last_trade_price": 955.2,
+      "daily_high": 973.24,
+      "daily_low": 937.27,
+      "daily_price_change_pct": -0.017091,
+      "funding_rate": 0.0001,
+      "open_interest": 29704.36,
+      "tick_size": "0.01",
+      "step_size": "0.01",
+      "min_order_size": "0.1",
+      "max_order_size": "1000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "AVAXUSD",
+      "base_token": {
+        "symbol": "AVAX"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000065",
+      "is_active": true,
+      "daily_volume_base": 270586.1,
+      "daily_volume_quote": 4624592.8108,
+      "daily_trades_count": 3498,
+      "last_trade_price": 16.978,
+      "daily_high": 17.677,
+      "daily_low": 16.636,
+      "daily_price_change_pct": -0.033913,
+      "funding_rate": 0.0001,
+      "open_interest": 12849.1,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "3",
+      "max_order_size": "15000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "XRPUSD",
+      "base_token": {
+        "symbol": "XRP"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000066",
+      "is_active": true,
+      "daily_volume_base": 90367491.7,
+      "daily_volume_quote": 219540456.06359,
+      "daily_trades_count": 71424,
+      "last_trade_price": 2.4622,
+      "daily_high": 2.5256,
+      "daily_low": 2.3152,
+      "daily_price_change_pct": 0.011876,
+      "funding_rate": 0.0001,
+      "open_interest": 3625275.4,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "25",
+      "max_order_size": "600000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "DOGEUSD",
+      "base_token": {
+        "symbol": "DOGE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000067",
+      "is_active": true,
+      "daily_volume_base": 620908579.0,
+      "daily_volume_quote": 107117644.1949,
+      "daily_trades_count": 53461,
+      "last_trade_price": 0.17353,
+      "daily_high": 0.17741,
+      "daily_low": 0.16714,
+      "daily_price_change_pct": -0.020158,
+      "funding_rate": 0.0001,
+      "open_interest": 61955382.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "300",
+      "max_order_size": "6000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "SUIUSD",
+      "base_token": {
+        "symbol": "SUI"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000068",
+      "is_active": true,
+      "daily_volume_base": 1262329.1,
+      "daily_volume_quote": 2513535.82457,
+      "daily_trades_count": 3430,
+      "last_trade_price": 1.9993,
+      "daily_high": 2.0742,
+      "daily_low": 1.9489,
+      "daily_price_change_pct": -0.03504,
+      "funding_rate": 0.0001,
+      "open_interest": 93367.5,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "20",
+      "max_order_size": "280000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "UNIUSD",
+      "base_token": {
+        "symbol": "UNI"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000069",
+      "is_active": true,
+      "daily_volume_base": 392658.1,
+      "daily_volume_quote": 3063731.5678,
+      "daily_trades_count": 3287,
+      "last_trade_price": 7.788,
+      "daily_high": 8.327,
+      "daily_low": 7.475,
+      "daily_price_change_pct": -0.064616,
+      "funding_rate": 0.0001,
+      "open_interest": 68728.0,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "10",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ADAUSD",
+      "base_token": {
+        "symbol": "ADA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000070",
+      "is_active": true,
+      "daily_volume_base": 2396110.0,
+      "daily_volume_quote": 1334597.5582,
+      "daily_trades_count": 3132,
+      "last_trade_price": 0.555,
+      "daily_high": 0.5761,
+      "daily_low": 0.5393,
+      "daily_price_change_pct": -0.035285,
+      "funding_rate": 0.0001,
+      "open_interest": 215415.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "400000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "KAITOUSD",
+      "base_token": {
+        "symbol": "KAITO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000071",
+      "is_active": true,
+      "daily_volume_base": 1203590.0,
+      "daily_volume_quote": 1015183.9028,
+      "daily_trades_count": 3206,
+      "last_trade_price": 0.8274,
+      "daily_high": 0.8684,
+      "daily_low": 0.8129,
+      "daily_price_change_pct": -0.042471,
+      "funding_rate": -0.0004836,
+      "open_interest": 78629.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "40",
+      "max_order_size": "30000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "HYPEUSD",
+      "base_token": {
+        "symbol": "HYPE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000072",
+      "is_active": true,
+      "daily_volume_base": 2018982.27,
+      "daily_volume_quote": 78198564.1544,
+      "daily_trades_count": 38654,
+      "last_trade_price": 38.468,
+      "daily_high": 39.841,
+      "daily_low": 37.5,
+      "daily_price_change_pct": -0.029786,
+      "funding_rate": 0.0001,
+      "open_interest": 109633.24,
+      "tick_size": "0.001",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "40000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ONDOUSD",
+      "base_token": {
+        "symbol": "ONDO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000073",
+      "is_active": true,
+      "daily_volume_base": 1876141.8,
+      "daily_volume_quote": 1211804.48341,
+      "daily_trades_count": 3102,
+      "last_trade_price": 0.6397,
+      "daily_high": 0.6685,
+      "daily_low": 0.6281,
+      "daily_price_change_pct": -0.041935,
+      "funding_rate": 0.0001,
+      "open_interest": 104596.0,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "70",
+      "max_order_size": "140000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "APTUSD",
+      "base_token": {
+        "symbol": "APT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000074",
+      "is_active": true,
+      "daily_volume_base": 539243.5,
+      "daily_volume_quote": 1651731.54115,
+      "daily_trades_count": 3337,
+      "last_trade_price": 3.0539,
+      "daily_high": 3.1319,
+      "daily_low": 2.9777,
+      "daily_price_change_pct": -0.018385,
+      "funding_rate": -0.00047542,
+      "open_interest": 1414762.8,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "10",
+      "max_order_size": "14000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "DOTUSD",
+      "base_token": {
+        "symbol": "DOT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000075",
+      "is_active": true,
+      "daily_volume_base": 434427.1,
+      "daily_volume_quote": 1288096.7608,
+      "daily_trades_count": 3226,
+      "last_trade_price": 2.973,
+      "daily_high": 3.098,
+      "daily_low": 2.874,
+      "daily_price_change_pct": -0.039418,
+      "funding_rate": 0.0001,
+      "open_interest": 105764.9,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "15",
+      "max_order_size": "40000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TONUSD",
+      "base_token": {
+        "symbol": "TON"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000076",
+      "is_active": true,
+      "daily_volume_base": 566060.2,
+      "daily_volume_quote": 1149297.1714,
+      "daily_trades_count": 3095,
+      "last_trade_price": 2.067,
+      "daily_high": 2.086,
+      "daily_low": 1.984,
+      "daily_price_change_pct": -0.005293,
+      "funding_rate": 0.0001,
+      "open_interest": 69288.4,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "20",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "AAVEUSD",
+      "base_token": {
+        "symbol": "AAVE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000077",
+      "is_active": true,
+      "daily_volume_base": 8961.94,
+      "daily_volume_quote": 1867294.1849,
+      "daily_trades_count": 3195,
+      "last_trade_price": 208.36,
+      "daily_high": 216.11,
+      "daily_low": 202.82,
+      "daily_price_change_pct": -0.033221,
+      "funding_rate": 0.0001,
+      "open_interest": 256.15,
+      "tick_size": "0.01",
+      "step_size": "0.01",
+      "min_order_size": "0.2",
+      "max_order_size": "2000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "FILUSD",
+      "base_token": {
+        "symbol": "FIL"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000078",
+      "is_active": true,
+      "daily_volume_base": 645524.5,
+      "daily_volume_quote": 1406608.6493,
+      "daily_trades_count": 3197,
+      "last_trade_price": 2.132,
+      "daily_high": 2.278,
+      "daily_low": 2.083,
+      "daily_price_change_pct": -0.064091,
+      "funding_rate": 0.0001,
+      "open_interest": 63695.7,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "20",
+      "max_order_size": "40000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ETHFIUSD",
+      "base_token": {
+        "symbol": "ETHFI"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000079",
+      "is_active": true,
+      "daily_volume_base": 1067702.6,
+      "daily_volume_quote": 1018073.58672,
+      "daily_trades_count": 3139,
+      "last_trade_price": 0.9519,
+      "daily_high": 0.9928,
+      "daily_low": 0.9106,
+      "daily_price_change_pct": -0.032916,
+      "funding_rate": -0.00078648,
+      "open_interest": 50653.8,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "40",
+      "max_order_size": "26000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "SPXUSD",
+      "base_token": {
+        "symbol": "SPX"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000080",
+      "is_active": true,
+      "daily_volume_base": 1500923.0,
+      "daily_volume_quote": 976630.3934,
+      "daily_trades_count": 3190,
+      "last_trade_price": 0.6384,
+      "daily_high": 0.6969,
+      "daily_low": 0.6238,
+      "daily_price_change_pct": -0.08157,
+      "funding_rate": 0.0001,
+      "open_interest": 126658.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "40",
+      "max_order_size": "36000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "SEIUSD",
+      "base_token": {
+        "symbol": "SEI"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000081",
+      "is_active": true,
+      "daily_volume_base": 5114483.0,
+      "daily_volume_quote": 892672.195,
+      "daily_trades_count": 3162,
+      "last_trade_price": 0.174,
+      "daily_high": 0.1792,
+      "daily_low": 0.1691,
+      "daily_price_change_pct": -0.028475,
+      "funding_rate": 0.0001,
+      "open_interest": 977661.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "150",
+      "max_order_size": "300000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TIAUSD",
+      "base_token": {
+        "symbol": "TIA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000082",
+      "is_active": true,
+      "daily_volume_base": 746141.0,
+      "daily_volume_quote": 696342.411,
+      "daily_trades_count": 3066,
+      "last_trade_price": 0.916,
+      "daily_high": 0.972,
+      "daily_low": 0.903,
+      "daily_price_change_pct": -0.057613,
+      "funding_rate": 0.0001,
+      "open_interest": 103278.0,
+      "tick_size": "0.001",
+      "step_size": "1",
+      "min_order_size": "30",
+      "max_order_size": "26000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "FARTCOINUSD",
+      "base_token": {
+        "symbol": "FARTCOIN"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000083",
+      "is_active": true,
+      "daily_volume_base": 3323312.0,
+      "daily_volume_quote": 940437.62551,
+      "daily_trades_count": 3126,
+      "last_trade_price": 0.2805,
+      "daily_high": 0.3054,
+      "daily_low": 0.2715,
+      "daily_price_change_pct": -0.078515,
+      "funding_rate": 0.0001,
+      "open_interest": 331373.4,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "50",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "WLDUSD",
+      "base_token": {
+        "symbol": "WLD"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000084",
+      "is_active": true,
+      "daily_volume_base": 1304192.0,
+      "daily_volume_quote": 1012443.7121,
+      "daily_trades_count": 3182,
+      "last_trade_price": 0.7827,
+      "daily_high": 0.8089,
+      "daily_low": 0.7451,
+      "daily_price_change_pct": -0.024794,
+      "funding_rate": 0.0001,
+      "open_interest": 26681.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "50",
+      "max_order_size": "250000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "NEARUSD",
+      "base_token": {
+        "symbol": "NEAR"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000085",
+      "is_active": true,
+      "daily_volume_base": 491431.0,
+      "daily_volume_quote": 1252005.8,
+      "daily_trades_count": 3102,
+      "last_trade_price": 2.536,
+      "daily_high": 2.62,
+      "daily_low": 2.48,
+      "daily_price_change_pct": -0.029096,
+      "funding_rate": 0.0001,
+      "open_interest": 40939.0,
+      "tick_size": "0.001",
+      "step_size": "1",
+      "min_order_size": "20",
+      "max_order_size": "40000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "VIRTUALUSD",
+      "base_token": {
+        "symbol": "VIRTUAL"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000086",
+      "is_active": true,
+      "daily_volume_base": 1142322.8,
+      "daily_volume_quote": 1466943.55778,
+      "daily_trades_count": 3294,
+      "last_trade_price": 1.252,
+      "daily_high": 1.3644,
+      "daily_low": 1.2308,
+      "daily_price_change_pct": -0.079344,
+      "funding_rate": 0.0001,
+      "open_interest": 54658.4,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "30",
+      "max_order_size": "80000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TAOUSD",
+      "base_token": {
+        "symbol": "TAO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000087",
+      "is_active": true,
+      "daily_volume_base": 5557.02,
+      "daily_volume_quote": 1959796.417,
+      "daily_trades_count": 3135,
+      "last_trade_price": 351.1,
+      "daily_high": 370.4,
+      "daily_low": 343.3,
+      "daily_price_change_pct": -0.048509,
+      "funding_rate": 0.0001,
+      "open_interest": 414.52,
+      "tick_size": "0.1",
+      "step_size": "0.01",
+      "min_order_size": "0.2",
+      "max_order_size": "200",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "WIFUSD",
+      "base_token": {
+        "symbol": "WIF"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000088",
+      "is_active": true,
+      "daily_volume_base": 1233559.9,
+      "daily_volume_quote": 566484.3681,
+      "daily_trades_count": 3104,
+      "last_trade_price": 0.4626,
+      "daily_high": 0.4903,
+      "daily_low": 0.4437,
+      "daily_price_change_pct": -0.052437,
+      "funding_rate": 0.0001,
+      "open_interest": 64145.6,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "50",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "PENGUUSD",
+      "base_token": {
+        "symbol": "PENGU"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000089",
+      "is_active": true,
+      "daily_volume_base": 28949060.0,
+      "daily_volume_quote": 420218.4169,
+      "daily_trades_count": 3091,
+      "last_trade_price": 0.01434,
+      "daily_high": 0.01537,
+      "daily_low": 0.01402,
+      "daily_price_change_pct": -0.064579,
+      "funding_rate": 0.0001,
+      "open_interest": 12917310.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "1000",
+      "max_order_size": "6000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "LDOUSD",
+      "base_token": {
+        "symbol": "LDO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000090",
+      "is_active": true,
+      "daily_volume_base": 1058041.0,
+      "daily_volume_quote": 860797.5719,
+      "daily_trades_count": 3110,
+      "last_trade_price": 0.8061,
+      "daily_high": 0.8506,
+      "daily_low": 0.7778,
+      "daily_price_change_pct": -0.044452,
+      "funding_rate": 0.0001,
+      "open_interest": 31318.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "40",
+      "max_order_size": "36000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "1000PEPEUSD",
+      "base_token": {
+        "symbol": "1000PEPE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000091",
+      "is_active": true,
+      "daily_volume_base": 225510700.0,
+      "daily_volume_quote": 1302846.06976,
+      "daily_trades_count": 3312,
+      "last_trade_price": 0.005847,
+      "daily_high": 0.0060619,
+      "daily_low": 0.0056527,
+      "daily_price_change_pct": -0.032946,
+      "funding_rate": 0.0001,
+      "open_interest": 37673900.0,
+      "tick_size": "0.0000001",
+      "step_size": "100",
+      "min_order_size": "5000",
+      "max_order_size": "30000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "MOODENGUSD",
+      "base_token": {
+        "symbol": "MOODENG"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000092",
+      "is_active": true,
+      "daily_volume_base": 5790300.0,
+      "daily_volume_quote": 530559.058,
+      "daily_trades_count": 3123,
+      "last_trade_price": 0.09051,
+      "daily_high": 0.09901,
+      "daily_low": 0.08886,
+      "daily_price_change_pct": -0.060514,
+      "funding_rate": -0.00156372,
+      "open_interest": 749600.0,
+      "tick_size": "0.00001",
+      "step_size": "100",
+      "min_order_size": "200",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "IPUSD",
+      "base_token": {
+        "symbol": "IP"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000093",
+      "is_active": true,
+      "daily_volume_base": 477283.8,
+      "daily_volume_quote": 1838155.0155,
+      "daily_trades_count": 3441,
+      "last_trade_price": 3.808,
+      "daily_high": 4.293,
+      "daily_low": 3.651,
+      "daily_price_change_pct": -0.07438,
+      "funding_rate": -0.00375,
+      "open_interest": 61161.9,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "15",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "LAUNCHCOINUSD",
+      "base_token": {
+        "symbol": "LAUNCHCOIN"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000094",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.06218,
+      "daily_high": 0.06276,
+      "daily_low": 0.06118,
+      "daily_price_change_pct": -0.027525,
+      "funding_rate": 0.0001,
+      "open_interest": 80870.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "400",
+      "max_order_size": "600000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "PUMPUSD",
+      "base_token": {
+        "symbol": "PUMP"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000095",
+      "is_active": true,
+      "daily_volume_base": 9730274900.0,
+      "daily_volume_quote": 39012033.6949,
+      "daily_trades_count": 32318,
+      "last_trade_price": 0.003844,
+      "daily_high": 0.004407,
+      "daily_low": 0.003788,
+      "daily_price_change_pct": -0.118954,
+      "funding_rate": 0.0001,
+      "open_interest": 28541900.0,
+      "tick_size": "0.000001",
+      "step_size": "100",
+      "min_order_size": "8000",
+      "max_order_size": "160000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "XLMUSD",
+      "base_token": {
+        "symbol": "XLM"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000096",
+      "is_active": true,
+      "daily_volume_base": 19416569.0,
+      "daily_volume_quote": 5518089.30435,
+      "daily_trades_count": 3564,
+      "last_trade_price": 0.28318,
+      "daily_high": 0.29939,
+      "daily_low": 0.27376,
+      "daily_price_change_pct": -0.028808,
+      "funding_rate": -0.00010784,
+      "open_interest": 786054.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "600000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ATOMUSD",
+      "base_token": {
+        "symbol": "ATOM"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000097",
+      "is_active": true,
+      "daily_volume_base": 248197.9,
+      "daily_volume_quote": 729022.4408,
+      "daily_trades_count": 3076,
+      "last_trade_price": 2.951,
+      "daily_high": 3.056,
+      "daily_low": 2.859,
+      "daily_price_change_pct": -0.033409,
+      "funding_rate": 0.0001,
+      "open_interest": 39138.5,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "10",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "POPCATUSD",
+      "base_token": {
+        "symbol": "POPCAT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000098",
+      "is_active": true,
+      "daily_volume_base": 4026341.0,
+      "daily_volume_quote": 550181.3104,
+      "daily_trades_count": 3246,
+      "last_trade_price": 0.1228,
+      "daily_high": 0.2107,
+      "daily_low": 0.1196,
+      "daily_price_change_pct": -0.3634,
+      "funding_rate": -0.0006647,
+      "open_interest": 141918.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "100000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "PNUTUSD",
+      "base_token": {
+        "symbol": "PNUT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000099",
+      "is_active": true,
+      "daily_volume_base": 4863515.0,
+      "daily_volume_quote": 547123.9953,
+      "daily_trades_count": 3065,
+      "last_trade_price": 0.1112,
+      "daily_high": 0.1216,
+      "daily_low": 0.1082,
+      "daily_price_change_pct": -0.062394,
+      "funding_rate": 8.278e-05,
+      "open_interest": 40916.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "200",
+      "max_order_size": "140000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ORDIUSD",
+      "base_token": {
+        "symbol": "ORDI"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000100",
+      "is_active": true,
+      "daily_volume_base": 129686.6,
+      "daily_volume_quote": 622356.4471,
+      "daily_trades_count": 3084,
+      "last_trade_price": 4.765,
+      "daily_high": 5.044,
+      "daily_low": 4.653,
+      "daily_price_change_pct": -0.053248,
+      "funding_rate": 0.0001,
+      "open_interest": 13049.1,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "5",
+      "max_order_size": "3600",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "JTOUSD",
+      "base_token": {
+        "symbol": "JTO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000101",
+      "is_active": true,
+      "daily_volume_base": 712525.0,
+      "daily_volume_quote": 520381.4959,
+      "daily_trades_count": 3124,
+      "last_trade_price": 0.7302,
+      "daily_high": 0.7721,
+      "daily_low": 0.6973,
+      "daily_price_change_pct": -0.041606,
+      "funding_rate": 0.0001,
+      "open_interest": 101025.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "25",
+      "max_order_size": "24000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "MKRUSD",
+      "base_token": {
+        "symbol": "MKR"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000102",
+      "is_active": true,
+      "daily_volume_base": 0.84,
+      "daily_volume_quote": 1126.511,
+      "daily_trades_count": 16,
+      "last_trade_price": 1342.0,
+      "daily_high": 1342.0,
+      "daily_low": 1340.2,
+      "daily_price_change_pct": 0.069407,
+      "funding_rate": 0.0001,
+      "open_interest": 1.65,
+      "tick_size": "0.1",
+      "step_size": "0.01",
+      "min_order_size": "0.02",
+      "max_order_size": "20",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00015"
+    },
+    {
+      "symbol": "PENDLEUSD",
+      "base_token": {
+        "symbol": "PENDLE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000103",
+      "is_active": true,
+      "daily_volume_base": 266557.7,
+      "daily_volume_quote": 704226.87938,
+      "daily_trades_count": 3149,
+      "last_trade_price": 2.6266,
+      "daily_high": 2.7563,
+      "daily_low": 2.5651,
+      "daily_price_change_pct": -0.045393,
+      "funding_rate": -7.594e-05,
+      "open_interest": 23878.1,
+      "tick_size": "0.0001",
+      "step_size": "0.1",
+      "min_order_size": "10",
+      "max_order_size": "8000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "1000FLOKIUSD",
+      "base_token": {
+        "symbol": "1000FLOKI"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000104",
+      "is_active": true,
+      "daily_volume_base": 10348167.0,
+      "daily_volume_quote": 621958.50808,
+      "daily_trades_count": 3079,
+      "last_trade_price": 0.05935,
+      "daily_high": 0.06277,
+      "daily_low": 0.0579,
+      "daily_price_change_pct": -0.052673,
+      "funding_rate": 0.0001,
+      "open_interest": 83310.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "400",
+      "max_order_size": "400000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "FETUSD",
+      "base_token": {
+        "symbol": "FET"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000105",
+      "is_active": true,
+      "daily_volume_base": 1624588.0,
+      "daily_volume_quote": 510401.181,
+      "daily_trades_count": 3084,
+      "last_trade_price": 0.302,
+      "daily_high": 0.3416,
+      "daily_low": 0.3,
+      "daily_price_change_pct": -0.116959,
+      "funding_rate": 0.0001,
+      "open_interest": 16211.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "60",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ENSUSD",
+      "base_token": {
+        "symbol": "ENS"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000106",
+      "is_active": true,
+      "daily_volume_base": 51632.7,
+      "daily_volume_quote": 724486.7951,
+      "daily_trades_count": 3102,
+      "last_trade_price": 13.899,
+      "daily_high": 14.487,
+      "daily_low": 13.625,
+      "daily_price_change_pct": -0.039925,
+      "funding_rate": 0.0001,
+      "open_interest": 3919.5,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "2",
+      "max_order_size": "1800",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "EIGENUSD",
+      "base_token": {
+        "symbol": "EIGEN"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000107",
+      "is_active": true,
+      "daily_volume_base": 861669.0,
+      "daily_volume_quote": 653994.8895,
+      "daily_trades_count": 3116,
+      "last_trade_price": 0.7624,
+      "daily_high": 0.8003,
+      "daily_low": 0.731,
+      "daily_price_change_pct": -0.046642,
+      "funding_rate": 0.0001,
+      "open_interest": 19833.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "30",
+      "max_order_size": "24000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "AI16ZUSD",
+      "base_token": {
+        "symbol": "AI16Z"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000108",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0603,
+      "daily_high": 0.0603,
+      "daily_low": 0.0603,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 3152.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "250",
+      "max_order_size": "300000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TEMP10001USD",
+      "base_token": {
+        "symbol": "TEMP10001"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000109",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.001",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP10002USD",
+      "base_token": {
+        "symbol": "TEMP10002"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000110",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.001",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP10003USD",
+      "base_token": {
+        "symbol": "TEMP10003"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000111",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.001",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP10004USD",
+      "base_token": {
+        "symbol": "TEMP10004"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000112",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.001",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP10005USD",
+      "base_token": {
+        "symbol": "TEMP10005"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000113",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.001",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09001USD",
+      "base_token": {
+        "symbol": "TEMP09001"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000114",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09002USD",
+      "base_token": {
+        "symbol": "TEMP09002"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000115",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09003USD",
+      "base_token": {
+        "symbol": "TEMP09003"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000116",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09004USD",
+      "base_token": {
+        "symbol": "TEMP09004"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000117",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09005USD",
+      "base_token": {
+        "symbol": "TEMP09005"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000118",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09006USD",
+      "base_token": {
+        "symbol": "TEMP09006"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000119",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09007USD",
+      "base_token": {
+        "symbol": "TEMP09007"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000120",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09008USD",
+      "base_token": {
+        "symbol": "TEMP09008"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000121",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09009USD",
+      "base_token": {
+        "symbol": "TEMP09009"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000122",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09010USD",
+      "base_token": {
+        "symbol": "TEMP09010"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000123",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09011USD",
+      "base_token": {
+        "symbol": "TEMP09011"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000124",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09012USD",
+      "base_token": {
+        "symbol": "TEMP09012"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000125",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09013USD",
+      "base_token": {
+        "symbol": "TEMP09013"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000126",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09014USD",
+      "base_token": {
+        "symbol": "TEMP09014"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000127",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09015USD",
+      "base_token": {
+        "symbol": "TEMP09015"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000128",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09016USD",
+      "base_token": {
+        "symbol": "TEMP09016"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000129",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09017USD",
+      "base_token": {
+        "symbol": "TEMP09017"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000130",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09018USD",
+      "base_token": {
+        "symbol": "TEMP09018"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000131",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09019USD",
+      "base_token": {
+        "symbol": "TEMP09019"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000132",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP09020USD",
+      "base_token": {
+        "symbol": "TEMP09020"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000133",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.01",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "RAYUSD",
+      "base_token": {
+        "symbol": "RAY"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000134",
+      "is_active": true,
+      "daily_volume_base": 380804.7,
+      "daily_volume_quote": 585698.2136,
+      "daily_trades_count": 3094,
+      "last_trade_price": 1.51,
+      "daily_high": 1.594,
+      "daily_low": 1.469,
+      "daily_price_change_pct": -0.043092,
+      "funding_rate": 0.0001,
+      "open_interest": 1843.8,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "15",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "FLUIDUSD",
+      "base_token": {
+        "symbol": "FLUID"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000135",
+      "is_active": true,
+      "daily_volume_base": 250966.5,
+      "daily_volume_quote": 990236.3049,
+      "daily_trades_count": 3085,
+      "last_trade_price": 3.927,
+      "daily_high": 4.04,
+      "daily_low": 3.807,
+      "daily_price_change_pct": -0.02362,
+      "funding_rate": 0.0001,
+      "open_interest": 3570.5,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "10",
+      "max_order_size": "5000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "GIGGLEUSD",
+      "base_token": {
+        "symbol": "GIGGLE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000136",
+      "is_active": true,
+      "daily_volume_base": 27965.3,
+      "daily_volume_quote": 4721164.375,
+      "daily_trades_count": 3679,
+      "last_trade_price": 165.28,
+      "daily_high": 177.22,
+      "daily_low": 160.92,
+      "daily_price_change_pct": -0.045507,
+      "funding_rate": -0.00012472,
+      "open_interest": 132.6,
+      "tick_size": "0.01",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "400",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TEMP08004USD",
+      "base_token": {
+        "symbol": "TEMP08004"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000137",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08005USD",
+      "base_token": {
+        "symbol": "TEMP08005"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000138",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08006USD",
+      "base_token": {
+        "symbol": "TEMP08006"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000139",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08007USD",
+      "base_token": {
+        "symbol": "TEMP08007"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000140",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08008USD",
+      "base_token": {
+        "symbol": "TEMP08008"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000141",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08009USD",
+      "base_token": {
+        "symbol": "TEMP08009"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000142",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08010USD",
+      "base_token": {
+        "symbol": "TEMP08010"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000143",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08011USD",
+      "base_token": {
+        "symbol": "TEMP08011"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000144",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08012USD",
+      "base_token": {
+        "symbol": "TEMP08012"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000145",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08013USD",
+      "base_token": {
+        "symbol": "TEMP08013"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000146",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08014USD",
+      "base_token": {
+        "symbol": "TEMP08014"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000147",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08015USD",
+      "base_token": {
+        "symbol": "TEMP08015"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000148",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08016USD",
+      "base_token": {
+        "symbol": "TEMP08016"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000149",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08017USD",
+      "base_token": {
+        "symbol": "TEMP08017"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000150",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08018USD",
+      "base_token": {
+        "symbol": "TEMP08018"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000151",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08019USD",
+      "base_token": {
+        "symbol": "TEMP08019"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000152",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08020USD",
+      "base_token": {
+        "symbol": "TEMP08020"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000153",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08021USD",
+      "base_token": {
+        "symbol": "TEMP08021"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000154",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08022USD",
+      "base_token": {
+        "symbol": "TEMP08022"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000155",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08023USD",
+      "base_token": {
+        "symbol": "TEMP08023"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000156",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08024USD",
+      "base_token": {
+        "symbol": "TEMP08024"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000157",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08025USD",
+      "base_token": {
+        "symbol": "TEMP08025"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000158",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08026USD",
+      "base_token": {
+        "symbol": "TEMP08026"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000159",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08027USD",
+      "base_token": {
+        "symbol": "TEMP08027"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000160",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08028USD",
+      "base_token": {
+        "symbol": "TEMP08028"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000161",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08029USD",
+      "base_token": {
+        "symbol": "TEMP08029"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000162",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP08030USD",
+      "base_token": {
+        "symbol": "TEMP08030"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000163",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "0.1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "YZYUSD",
+      "base_token": {
+        "symbol": "YZY"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000164",
+      "is_active": true,
+      "daily_volume_base": 1280166.0,
+      "daily_volume_quote": 483381.4445,
+      "daily_trades_count": 3116,
+      "last_trade_price": 0.3702,
+      "daily_high": 0.4023,
+      "daily_low": 0.3667,
+      "daily_price_change_pct": -0.052469,
+      "funding_rate": 9.972e-05,
+      "open_interest": 268437.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "30",
+      "max_order_size": "80000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "OPENUSD",
+      "base_token": {
+        "symbol": "OPEN"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000165",
+      "is_active": true,
+      "daily_volume_base": 946577.0,
+      "daily_volume_quote": 258105.3887,
+      "daily_trades_count": 3068,
+      "last_trade_price": 0.2718,
+      "daily_high": 0.286,
+      "daily_low": 0.2623,
+      "daily_price_change_pct": -0.04531,
+      "funding_rate": -0.00190184,
+      "open_interest": 22028.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "40",
+      "max_order_size": "22000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "AVNTUSD",
+      "base_token": {
+        "symbol": "AVNT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000166",
+      "is_active": true,
+      "daily_volume_base": 2727763.0,
+      "daily_volume_quote": 1383139.2449,
+      "daily_trades_count": 3874,
+      "last_trade_price": 0.5706,
+      "daily_high": 0.5923,
+      "daily_low": 0.4778,
+      "daily_price_change_pct": 0.094151,
+      "funding_rate": -0.00375,
+      "open_interest": 500355.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "50000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "HOLOUSD",
+      "base_token": {
+        "symbol": "HOLO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000167",
+      "is_active": true,
+      "daily_volume_base": 2430186.0,
+      "daily_volume_quote": 260840.6178,
+      "daily_trades_count": 3078,
+      "last_trade_price": 0.1069,
+      "daily_high": 0.1106,
+      "daily_low": 0.1028,
+      "daily_price_change_pct": -0.029064,
+      "funding_rate": 0.0001,
+      "open_interest": 107589.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "50000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "XPLUSD",
+      "base_token": {
+        "symbol": "XPL"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000168",
+      "is_active": true,
+      "daily_volume_base": 1895090.0,
+      "daily_volume_quote": 495144.708,
+      "daily_trades_count": 3109,
+      "last_trade_price": 0.2579,
+      "daily_high": 0.27,
+      "daily_low": 0.2521,
+      "daily_price_change_pct": -0.030451,
+      "funding_rate": 0.0001,
+      "open_interest": 219152.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "70",
+      "max_order_size": "36000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ASTERUSD",
+      "base_token": {
+        "symbol": "ASTER"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000169",
+      "is_active": true,
+      "daily_volume_base": 65155803.0,
+      "daily_volume_quote": 72963250.3149,
+      "daily_trades_count": 38923,
+      "last_trade_price": 1.0881,
+      "daily_high": 1.1755,
+      "daily_low": 1.0764,
+      "daily_price_change_pct": -0.06992,
+      "funding_rate": -0.00040364,
+      "open_interest": 5080649.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "70",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "0GUSD",
+      "base_token": {
+        "symbol": "0G"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000170",
+      "is_active": true,
+      "daily_volume_base": 556082.0,
+      "daily_volume_quote": 707403.6235,
+      "daily_trades_count": 3114,
+      "last_trade_price": 1.3146,
+      "daily_high": 1.3424,
+      "daily_low": 1.2111,
+      "daily_price_change_pct": -0.019174,
+      "funding_rate": -0.00375,
+      "open_interest": 1361811.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "20",
+      "max_order_size": "10000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ZKCUSD",
+      "base_token": {
+        "symbol": "ZKC"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000171",
+      "is_active": true,
+      "daily_volume_base": 1576716.0,
+      "daily_volume_quote": 284708.5243,
+      "daily_trades_count": 3076,
+      "last_trade_price": 0.1791,
+      "daily_high": 0.1895,
+      "daily_low": 0.1758,
+      "daily_price_change_pct": -0.052882,
+      "funding_rate": -0.00039402,
+      "open_interest": 359315.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "60",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "MIRAUSD",
+      "base_token": {
+        "symbol": "MIRA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000172",
+      "is_active": true,
+      "daily_volume_base": 780987.0,
+      "daily_volume_quote": 159699.5958,
+      "daily_trades_count": 3085,
+      "last_trade_price": 0.2034,
+      "daily_high": 0.2146,
+      "daily_low": 0.1966,
+      "daily_price_change_pct": -0.049976,
+      "funding_rate": 0.0001,
+      "open_interest": 14210.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "30",
+      "max_order_size": "40000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "APEXUSD",
+      "base_token": {
+        "symbol": "APEX"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000173",
+      "is_active": true,
+      "daily_volume_base": 653238.0,
+      "daily_volume_quote": 529805.522,
+      "daily_trades_count": 3083,
+      "last_trade_price": 0.801,
+      "daily_high": 0.848,
+      "daily_low": 0.79,
+      "daily_price_change_pct": -0.032608,
+      "funding_rate": 0.0001,
+      "open_interest": 36678.0,
+      "tick_size": "0.001",
+      "step_size": "1",
+      "min_order_size": "25",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "FFUSD",
+      "base_token": {
+        "symbol": "FF"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000174",
+      "is_active": true,
+      "daily_volume_base": 4145589.0,
+      "daily_volume_quote": 550038.0534,
+      "daily_trades_count": 3114,
+      "last_trade_price": 0.139,
+      "daily_high": 0.1395,
+      "daily_low": 0.1233,
+      "daily_price_change_pct": 0.065134,
+      "funding_rate": 0.0001,
+      "open_interest": 302389.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "150",
+      "max_order_size": "70000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "2ZUSD",
+      "base_token": {
+        "symbol": "2Z"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000175",
+      "is_active": true,
+      "daily_volume_base": 2670412.0,
+      "daily_volume_quote": 448372.44193,
+      "daily_trades_count": 3152,
+      "last_trade_price": 0.16582,
+      "daily_high": 0.1775,
+      "daily_low": 0.16392,
+      "daily_price_change_pct": -0.063481,
+      "funding_rate": -0.00127878,
+      "open_interest": 774434.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "CAKEUSD",
+      "base_token": {
+        "symbol": "CAKE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000176",
+      "is_active": true,
+      "daily_volume_base": 437189.0,
+      "daily_volume_quote": 1087584.225,
+      "daily_trades_count": 3100,
+      "last_trade_price": 2.4663,
+      "daily_high": 2.5598,
+      "daily_low": 2.434,
+      "daily_price_change_pct": -0.033846,
+      "funding_rate": 3.58e-06,
+      "open_interest": 20137.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "15",
+      "max_order_size": "10000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "YBUSD",
+      "base_token": {
+        "symbol": "YB"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000177",
+      "is_active": true,
+      "daily_volume_base": 1159950.0,
+      "daily_volume_quote": 545962.9544,
+      "daily_trades_count": 3159,
+      "last_trade_price": 0.4597,
+      "daily_high": 0.5045,
+      "daily_low": 0.4559,
+      "daily_price_change_pct": -0.089702,
+      "funding_rate": -2.364e-05,
+      "open_interest": 200623.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "40",
+      "max_order_size": "18000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "SOONUSD",
+      "base_token": {
+        "symbol": "SOON"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000178",
+      "is_active": true,
+      "daily_volume_base": 2572880.0,
+      "daily_volume_quote": 5123001.5739,
+      "daily_trades_count": 3371,
+      "last_trade_price": 1.9591,
+      "daily_high": 2.2354,
+      "daily_low": 1.8589,
+      "daily_price_change_pct": -0.01691,
+      "funding_rate": -0.00375,
+      "open_interest": 664245.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "30000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "MEGAUSD",
+      "base_token": {
+        "symbol": "MEGA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000179",
+      "is_active": true,
+      "daily_volume_base": 3742354.0,
+      "daily_volume_quote": 1673478.7746,
+      "daily_trades_count": 3123,
+      "last_trade_price": 0.452,
+      "daily_high": 0.4679,
+      "daily_low": 0.4302,
+      "daily_price_change_pct": -0.021433,
+      "funding_rate": 0.0001,
+      "open_interest": 283827.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "150",
+      "max_order_size": "30000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "APRUSD",
+      "base_token": {
+        "symbol": "APR"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000180",
+      "is_active": true,
+      "daily_volume_base": 5763742.0,
+      "daily_volume_quote": 1597268.04524,
+      "daily_trades_count": 3418,
+      "last_trade_price": 0.26531,
+      "daily_high": 0.29479,
+      "daily_low": 0.26272,
+      "daily_price_change_pct": -0.067582,
+      "funding_rate": 0.00074972,
+      "open_interest": 125248.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "200",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ONUSD",
+      "base_token": {
+        "symbol": "ON"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000181",
+      "is_active": true,
+      "daily_volume_base": 6149922.0,
+      "daily_volume_quote": 727194.51382,
+      "daily_trades_count": 3070,
+      "last_trade_price": 0.11054,
+      "daily_high": 0.13329,
+      "daily_low": 0.10928,
+      "daily_price_change_pct": -0.153015,
+      "funding_rate": 0.0001,
+      "open_interest": 16580.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "250",
+      "max_order_size": "80000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ATUSD",
+      "base_token": {
+        "symbol": "AT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000182",
+      "is_active": true,
+      "daily_volume_base": 4820383.0,
+      "daily_volume_quote": 1641682.3227,
+      "daily_trades_count": 3096,
+      "last_trade_price": 0.3465,
+      "daily_high": 0.3542,
+      "daily_low": 0.3176,
+      "daily_price_change_pct": 0.003475,
+      "funding_rate": 0.00297486,
+      "open_interest": 32666.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "200",
+      "max_order_size": "60000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "MMTUSD",
+      "base_token": {
+        "symbol": "MMT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000183",
+      "is_active": true,
+      "daily_volume_base": 4727228.0,
+      "daily_volume_quote": 2048464.1408,
+      "daily_trades_count": 3110,
+      "last_trade_price": 0.4131,
+      "daily_high": 0.4548,
+      "daily_low": 0.4077,
+      "daily_price_change_pct": -0.089887,
+      "funding_rate": -0.00034494,
+      "open_interest": 137650.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "200",
+      "max_order_size": "80000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TEMP07021USD",
+      "base_token": {
+        "symbol": "TEMP07021"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000184",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07022USD",
+      "base_token": {
+        "symbol": "TEMP07022"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000185",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07023USD",
+      "base_token": {
+        "symbol": "TEMP07023"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000186",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07024USD",
+      "base_token": {
+        "symbol": "TEMP07024"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000187",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07025USD",
+      "base_token": {
+        "symbol": "TEMP07025"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000188",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07026USD",
+      "base_token": {
+        "symbol": "TEMP07026"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000189",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07027USD",
+      "base_token": {
+        "symbol": "TEMP07027"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000190",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07028USD",
+      "base_token": {
+        "symbol": "TEMP07028"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000191",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07029USD",
+      "base_token": {
+        "symbol": "TEMP07029"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000192",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP07030USD",
+      "base_token": {
+        "symbol": "TEMP07030"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000193",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "1",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "LINEAUSD",
+      "base_token": {
+        "symbol": "LINEA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000194",
+      "is_active": true,
+      "daily_volume_base": 28656830.0,
+      "daily_volume_quote": 381765.0232,
+      "daily_trades_count": 3121,
+      "last_trade_price": 0.01308,
+      "daily_high": 0.01478,
+      "daily_low": 0.01267,
+      "daily_price_change_pct": -0.110808,
+      "funding_rate": 0.0001,
+      "open_interest": 3153780.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "1000",
+      "max_order_size": "600000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "BLESSUSD",
+      "base_token": {
+        "symbol": "BLESS"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000195",
+      "is_active": true,
+      "daily_volume_base": 34033230.0,
+      "daily_volume_quote": 911619.672,
+      "daily_trades_count": 3447,
+      "last_trade_price": 0.02406,
+      "daily_high": 0.02946,
+      "daily_low": 0.02381,
+      "daily_price_change_pct": -0.184406,
+      "funding_rate": 0.00375,
+      "open_interest": 20738950.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "800",
+      "max_order_size": "400000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "XANUSD",
+      "base_token": {
+        "symbol": "XAN"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000196",
+      "is_active": true,
+      "daily_volume_base": 7971400.0,
+      "daily_volume_quote": 284031.8738,
+      "daily_trades_count": 3092,
+      "last_trade_price": 0.03329,
+      "daily_high": 0.03916,
+      "daily_low": 0.03291,
+      "daily_price_change_pct": -0.1351,
+      "funding_rate": -0.0025417,
+      "open_interest": 1886300.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "300",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "VFYUSD",
+      "base_token": {
+        "symbol": "VFY"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000197",
+      "is_active": true,
+      "daily_volume_base": 9329680.0,
+      "daily_volume_quote": 431957.2272,
+      "daily_trades_count": 3075,
+      "last_trade_price": 0.04433,
+      "daily_high": 0.04824,
+      "daily_low": 0.04405,
+      "daily_price_change_pct": -0.080671,
+      "funding_rate": 0.0001,
+      "open_interest": 949930.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "400",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "MONUSD",
+      "base_token": {
+        "symbol": "MON"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000198",
+      "is_active": true,
+      "daily_volume_base": 9808090.0,
+      "daily_volume_quote": 496415.741,
+      "daily_trades_count": 3090,
+      "last_trade_price": 0.0465,
+      "daily_high": 0.0529,
+      "daily_low": 0.0459,
+      "daily_price_change_pct": -0.115969,
+      "funding_rate": 0.0001,
+      "open_interest": 653100.0,
+      "tick_size": "0.0001",
+      "step_size": "10",
+      "min_order_size": "400",
+      "max_order_size": "100000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "KITEUSD",
+      "base_token": {
+        "symbol": "KITE"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000199",
+      "is_active": true,
+      "daily_volume_base": 15521320.0,
+      "daily_volume_quote": 1291225.6019,
+      "daily_trades_count": 3143,
+      "last_trade_price": 0.07831,
+      "daily_high": 0.08802,
+      "daily_low": 0.07764,
+      "daily_price_change_pct": -0.072705,
+      "funding_rate": 9.8e-06,
+      "open_interest": 1488470.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "600",
+      "max_order_size": "400000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "USELESSUSD",
+      "base_token": {
+        "symbol": "USELESS"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000200",
+      "is_active": true,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "0.0001",
+      "step_size": "10",
+      "min_order_size": "400",
+      "max_order_size": "100000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TEMP06008USD",
+      "base_token": {
+        "symbol": "TEMP06008"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000201",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "10",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP06009USD",
+      "base_token": {
+        "symbol": "TEMP06009"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000202",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "10",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP06010USD",
+      "base_token": {
+        "symbol": "TEMP06010"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000203",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "10",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "UBUSD",
+      "base_token": {
+        "symbol": "UB"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000204",
+      "is_active": true,
+      "daily_volume_base": 72272000.0,
+      "daily_volume_quote": 3240251.2389,
+      "daily_trades_count": 3076,
+      "last_trade_price": 0.04403,
+      "daily_high": 0.047372,
+      "daily_low": 0.042505,
+      "daily_price_change_pct": 0.02869,
+      "funding_rate": 9.948e-05,
+      "open_interest": 1181900.0,
+      "tick_size": "0.000001",
+      "step_size": "100",
+      "min_order_size": "3000",
+      "max_order_size": "1200000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "BLUAIUSD",
+      "base_token": {
+        "symbol": "BLUAI"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000205",
+      "is_active": true,
+      "daily_volume_base": 73836700.0,
+      "daily_volume_quote": 995344.252,
+      "daily_trades_count": 3079,
+      "last_trade_price": 0.01278,
+      "daily_high": 0.01416,
+      "daily_low": 0.01264,
+      "daily_price_change_pct": -0.036925,
+      "funding_rate": 0.00108574,
+      "open_interest": 2782200.0,
+      "tick_size": "0.00001",
+      "step_size": "100",
+      "min_order_size": "3000",
+      "max_order_size": "1000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "TEMP05003USD",
+      "base_token": {
+        "symbol": "TEMP05003"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000206",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "100",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP05004USD",
+      "base_token": {
+        "symbol": "TEMP05004"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000207",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "100",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP05005USD",
+      "base_token": {
+        "symbol": "TEMP05005"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000208",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "100",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP05006USD",
+      "base_token": {
+        "symbol": "TEMP05006"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000209",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "100",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP05007USD",
+      "base_token": {
+        "symbol": "TEMP05007"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000210",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "100",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP05008USD",
+      "base_token": {
+        "symbol": "TEMP05008"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000211",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "100",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP05009USD",
+      "base_token": {
+        "symbol": "TEMP05009"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000212",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "100",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "TEMP05010USD",
+      "base_token": {
+        "symbol": "TEMP05010"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000213",
+      "is_active": false,
+      "daily_volume_base": 0.0,
+      "daily_volume_quote": 0.0,
+      "daily_trades_count": 0,
+      "last_trade_price": 0.0,
+      "daily_high": 0.0,
+      "daily_low": 0.0,
+      "daily_price_change_pct": 0.0,
+      "funding_rate": 0.0001,
+      "open_interest": 0.0,
+      "tick_size": "1",
+      "step_size": "100",
+      "min_order_size": "1",
+      "max_order_size": "1",
+      "default_taker_fee_rate": "0.0001",
+      "default_maker_fee_rate": "0.0001"
+    },
+    {
+      "symbol": "RESOLVUSD",
+      "base_token": {
+        "symbol": "RESOLV"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000214",
+      "is_active": true,
+      "daily_volume_base": 26372862.0,
+      "daily_volume_quote": 3615203.43691,
+      "daily_trades_count": 5644,
+      "last_trade_price": 0.14075,
+      "daily_high": 0.16041,
+      "daily_low": 0.1143,
+      "daily_price_change_pct": 0.097637,
+      "funding_rate": -0.00375,
+      "open_interest": 10964804.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "300",
+      "max_order_size": "200000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "GRASSUSD",
+      "base_token": {
+        "symbol": "GRASS"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000215",
+      "is_active": true,
+      "daily_volume_base": 2023608.0,
+      "daily_volume_quote": 633642.9759,
+      "daily_trades_count": 3110,
+      "last_trade_price": 0.3086,
+      "daily_high": 0.3261,
+      "daily_low": 0.3006,
+      "daily_price_change_pct": -0.051045,
+      "funding_rate": 0.0001,
+      "open_interest": 9970.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "70",
+      "max_order_size": "40000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ZORAUSD",
+      "base_token": {
+        "symbol": "ZORA"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000216",
+      "is_active": true,
+      "daily_volume_base": 57405720.0,
+      "daily_volume_quote": 3755226.7848,
+      "daily_trades_count": 5752,
+      "last_trade_price": 0.06166,
+      "daily_high": 0.07079,
+      "daily_low": 0.05429,
+      "daily_price_change_pct": 0.052038,
+      "funding_rate": -0.00375,
+      "open_interest": 28574640.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "700",
+      "max_order_size": "300000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ZKUSD",
+      "base_token": {
+        "symbol": "ZK"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000217",
+      "is_active": true,
+      "daily_volume_base": 25578130.0,
+      "daily_volume_quote": 1263152.722,
+      "daily_trades_count": 3132,
+      "last_trade_price": 0.04888,
+      "daily_high": 0.05081,
+      "daily_low": 0.04785,
+      "daily_price_change_pct": -0.036657,
+      "funding_rate": 0.0001,
+      "open_interest": 345580.0,
+      "tick_size": "0.00001",
+      "step_size": "10",
+      "min_order_size": "900",
+      "max_order_size": "500000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "1000000MOGUSD",
+      "base_token": {
+        "symbol": "1000000MOG"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000218",
+      "is_active": true,
+      "daily_volume_base": 1237500.0,
+      "daily_volume_quote": 472475.4043,
+      "daily_trades_count": 3216,
+      "last_trade_price": 0.3955,
+      "daily_high": 0.4393,
+      "daily_low": 0.3437,
+      "daily_price_change_pct": 0.047404,
+      "funding_rate": -0.0005002,
+      "open_interest": 95135.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "30",
+      "max_order_size": "30000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "OKBUSD",
+      "base_token": {
+        "symbol": "OKB"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000219",
+      "is_active": true,
+      "daily_volume_base": 12998.0,
+      "daily_volume_quote": 1604032.463,
+      "daily_trades_count": 3172,
+      "last_trade_price": 122.15,
+      "daily_high": 126.67,
+      "daily_low": 120.9,
+      "daily_price_change_pct": -0.034616,
+      "funding_rate": -0.00034058,
+      "open_interest": 2868.8,
+      "tick_size": "0.01",
+      "step_size": "0.1",
+      "min_order_size": "0.5",
+      "max_order_size": "1000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "WLFIUSD",
+      "base_token": {
+        "symbol": "WLFI"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000220",
+      "is_active": true,
+      "daily_volume_base": 4833937.0,
+      "daily_volume_quote": 707059.9716,
+      "daily_trades_count": 3185,
+      "last_trade_price": 0.1501,
+      "daily_high": 0.1542,
+      "daily_low": 0.1396,
+      "daily_price_change_pct": -0.018954,
+      "funding_rate": -0.00044302,
+      "open_interest": 2756905.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "100",
+      "max_order_size": "1000000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "BCHUSD",
+      "base_token": {
+        "symbol": "BCH"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000221",
+      "is_active": true,
+      "daily_volume_base": 21200.39,
+      "daily_volume_quote": 11119339.1211,
+      "daily_trades_count": 3528,
+      "last_trade_price": 522.14,
+      "daily_high": 530.52,
+      "daily_low": 497.89,
+      "daily_price_change_pct": -0.011547,
+      "funding_rate": 0.0001,
+      "open_interest": 683.17,
+      "tick_size": "0.01",
+      "step_size": "0.01",
+      "min_order_size": "0.1",
+      "max_order_size": "400",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "XMRUSD",
+      "base_token": {
+        "symbol": "XMR"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000222",
+      "is_active": true,
+      "daily_volume_base": 5630.16,
+      "daily_volume_quote": 2201043.7337,
+      "daily_trades_count": 3189,
+      "last_trade_price": 383.31,
+      "daily_high": 403.91,
+      "daily_low": 374.54,
+      "daily_price_change_pct": 0.004402,
+      "funding_rate": 0.0001,
+      "open_interest": 1112.57,
+      "tick_size": "0.01",
+      "step_size": "0.01",
+      "min_order_size": "0.2",
+      "max_order_size": "400",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ETCUSD",
+      "base_token": {
+        "symbol": "ETC"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000223",
+      "is_active": true,
+      "daily_volume_base": 61849.9,
+      "daily_volume_quote": 957993.4631,
+      "daily_trades_count": 3118,
+      "last_trade_price": 15.431,
+      "daily_high": 15.907,
+      "daily_low": 15.08,
+      "daily_price_change_pct": -0.028947,
+      "funding_rate": 0.0001,
+      "open_interest": 3996.5,
+      "tick_size": "0.001",
+      "step_size": "0.1",
+      "min_order_size": "2",
+      "max_order_size": "6000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ICPUSD",
+      "base_token": {
+        "symbol": "ICP"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000224",
+      "is_active": true,
+      "daily_volume_base": 372471.3,
+      "daily_volume_quote": 2306297.90959,
+      "daily_trades_count": 3264,
+      "last_trade_price": 6.069,
+      "daily_high": 6.648,
+      "daily_low": 5.842,
+      "daily_price_change_pct": -0.026155,
+      "funding_rate": 0.0001,
+      "open_interest": 34986.06,
+      "tick_size": "0.001",
+      "step_size": "0.01",
+      "min_order_size": "10",
+      "max_order_size": "20000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ALGOUSD",
+      "base_token": {
+        "symbol": "ALGO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000225",
+      "is_active": true,
+      "daily_volume_base": 4782557.0,
+      "daily_volume_quote": 837826.6825,
+      "daily_trades_count": 3061,
+      "last_trade_price": 0.1756,
+      "daily_high": 0.1818,
+      "daily_low": 0.1703,
+      "daily_price_change_pct": -0.033571,
+      "funding_rate": 0.0001,
+      "open_interest": 89120.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "200",
+      "max_order_size": "400000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "STXUSD",
+      "base_token": {
+        "symbol": "STX"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000226",
+      "is_active": true,
+      "daily_volume_base": 2047379.0,
+      "daily_volume_quote": 831368.4401,
+      "daily_trades_count": 3070,
+      "last_trade_price": 0.4035,
+      "daily_high": 0.4254,
+      "daily_low": 0.3961,
+      "daily_price_change_pct": -0.049021,
+      "funding_rate": 0.0001,
+      "open_interest": 14775.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "80",
+      "max_order_size": "70000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "PAXGUSD",
+      "base_token": {
+        "symbol": "PAXG"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000227",
+      "is_active": true,
+      "daily_volume_base": 440.053,
+      "daily_volume_quote": 1846182.24677,
+      "daily_trades_count": 3625,
+      "last_trade_price": 4180.89,
+      "daily_high": 4236.21,
+      "daily_low": 4122.91,
+      "daily_price_change_pct": 0.013485,
+      "funding_rate": 0.0001,
+      "open_interest": 49.107,
+      "tick_size": "0.01",
+      "step_size": "0.001",
+      "min_order_size": "0.01",
+      "max_order_size": "20",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "PYTHUSD",
+      "base_token": {
+        "symbol": "PYTH"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000228",
+      "is_active": true,
+      "daily_volume_base": 7932940.0,
+      "daily_volume_quote": 802437.503,
+      "daily_trades_count": 3094,
+      "last_trade_price": 0.101,
+      "daily_high": 0.1052,
+      "daily_low": 0.0972,
+      "daily_price_change_pct": -0.038095,
+      "funding_rate": 0.0001,
+      "open_interest": 1092300.0,
+      "tick_size": "0.0001",
+      "step_size": "10",
+      "min_order_size": "300",
+      "max_order_size": "280000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "CFXUSD",
+      "base_token": {
+        "symbol": "CFX"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000229",
+      "is_active": true,
+      "daily_volume_base": 9219486.0,
+      "daily_volume_quote": 886732.525,
+      "daily_trades_count": 3218,
+      "last_trade_price": 0.09464,
+      "daily_high": 0.10369,
+      "daily_low": 0.09382,
+      "daily_price_change_pct": -0.087983,
+      "funding_rate": -0.00033008,
+      "open_interest": 374980.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "300",
+      "max_order_size": "240000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "SNXUSD",
+      "base_token": {
+        "symbol": "SNX"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000230",
+      "is_active": true,
+      "daily_volume_base": 700005.0,
+      "daily_volume_quote": 553651.207,
+      "daily_trades_count": 3059,
+      "last_trade_price": 0.773,
+      "daily_high": 0.831,
+      "daily_low": 0.761,
+      "daily_price_change_pct": -0.066425,
+      "funding_rate": 0.0001,
+      "open_interest": 1625.0,
+      "tick_size": "0.001",
+      "step_size": "1",
+      "min_order_size": "30",
+      "max_order_size": "15000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "HBARUSD",
+      "base_token": {
+        "symbol": "HBAR"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000231",
+      "is_active": true,
+      "daily_volume_base": 11070288.0,
+      "daily_volume_quote": 1955334.51858,
+      "daily_trades_count": 3198,
+      "last_trade_price": 0.17532,
+      "daily_high": 0.1832,
+      "daily_low": 0.17276,
+      "daily_price_change_pct": -0.042019,
+      "funding_rate": 0.0001,
+      "open_interest": 351698.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "350",
+      "max_order_size": "600000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "MNTUSD",
+      "base_token": {
+        "symbol": "MNT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000232",
+      "is_active": true,
+      "daily_volume_base": 1211671.0,
+      "daily_volume_quote": 1540306.6836,
+      "daily_trades_count": 3210,
+      "last_trade_price": 1.2624,
+      "daily_high": 1.3012,
+      "daily_low": 1.2347,
+      "daily_price_change_pct": -0.021471,
+      "funding_rate": 0.0001,
+      "open_interest": 173576.0,
+      "tick_size": "0.0001",
+      "step_size": "1",
+      "min_order_size": "30",
+      "max_order_size": "100000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "CROUSD",
+      "base_token": {
+        "symbol": "CRO"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000233",
+      "is_active": true,
+      "daily_volume_base": 9097941.0,
+      "daily_volume_quote": 1147086.13085,
+      "daily_trades_count": 3104,
+      "last_trade_price": 0.12617,
+      "daily_high": 0.12958,
+      "daily_low": 0.1227,
+      "daily_price_change_pct": -0.024509,
+      "funding_rate": 0.0001,
+      "open_interest": 1095207.0,
+      "tick_size": "0.00001",
+      "step_size": "1",
+      "min_order_size": "350",
+      "max_order_size": "800000",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "XAUTUSD",
+      "base_token": {
+        "symbol": "XAUT"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000234",
+      "is_active": true,
+      "daily_volume_base": 526.202,
+      "daily_volume_quote": 2201036.623,
+      "daily_trades_count": 3524,
+      "last_trade_price": 4168.5,
+      "daily_high": 4225.2,
+      "daily_low": 4115.7,
+      "daily_price_change_pct": 0.012336,
+      "funding_rate": -0.0001189,
+      "open_interest": 65.907,
+      "tick_size": "0.1",
+      "step_size": "0.001",
+      "min_order_size": "0.01",
+      "max_order_size": "20",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    },
+    {
+      "symbol": "ZECUSD",
+      "base_token": {
+        "symbol": "ZEC"
+      },
+      "quote_token": {
+        "symbol": "USD"
+      },
+      "contract_id": "10000235",
+      "is_active": true,
+      "daily_volume_base": 7053.44,
+      "daily_volume_quote": 3520002.6211,
+      "daily_trades_count": 3902,
+      "last_trade_price": 483.32,
+      "daily_high": 546.75,
+      "daily_low": 447.24,
+      "daily_price_change_pct": 0.020976,
+      "funding_rate": 0.0001,
+      "open_interest": 489.17,
+      "tick_size": "0.01",
+      "step_size": "0.01",
+      "min_order_size": "0.2",
+      "max_order_size": "400",
+      "default_taker_fee_rate": "0.00038",
+      "default_maker_fee_rate": "0.00012"
+    }
+  ]
+}

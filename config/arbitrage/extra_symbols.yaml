@@ -1,0 +1,16 @@
+# 额外需要监控的交易对（可选）
+# 可以是全球配置，也可以按交易所分组（by_exchange）
+# 🔥 多腿套利所需的额外交易对
+extra_symbols:
+  - PAXG-USD-PERP    # Lighter黄金代币（加密货币板块）
+  - XAU-USD-PERP     # Lighter黄金RWA（RWA板块）
+  - ETH-USDC-PERP    # Lighter ETH合约（标准格式）
+  - ETH-USDC-SPOT    # Lighter ETH现货（标准格式）
+
+by_exchange:
+  lighter:
+    - PAXG-USD-PERP    # 用于 PAXG ↔ XAU 同所套利
+    - XAU-USD-PERP     # 用于 PAXG ↔ XAU 同所套利
+    - ETH-USDC-PERP    # 用于 ETH 现货合约套利（合约，映射为 ETH）
+    - ETH-USDC-SPOT    # 用于 ETH 现货合约套利（现货，映射为 ETH/USDC）
+

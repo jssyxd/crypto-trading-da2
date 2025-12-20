@@ -14,9 +14,12 @@ hyperliquid:
     
   # 认证配置 - 用于私有API调用
   # 💡 说明：Hyperliquid使用钱包签名认证，只需要2个字段
+  # 📌 密钥已迁移到环境变量（.env 文件）：
+  #    HYPERLIQUID_PRIVATE_KEY - 钱包私钥
+  #    HYPERLIQUID_WALLET_ADDRESS - 钱包地址
   authentication:
-    private_key: '111111111111'                      # 🔑 钱包私钥(用于签名认证) - 必填
-    wallet_address: '1111111111111'                   # 📍 钱包地址 - 必填
+    private_key: ''                      # 留空，使用环境变量 HYPERLIQUID_PRIVATE_KEY
+    wallet_address: ''                   # 留空，使用环境变量 HYPERLIQUID_WALLET_ADDRESS
   # 自定义订阅配置 - 定义预设的订阅组合
   custom_subscriptions:
     # 当前激活的订阅组合
@@ -290,7 +293,7 @@ hyperliquid:
     #   1. 使用脚本: python3 switch_hyperliquid_websocket.py [native|ccxt]
     #   2. 手动修改: 直接改变下面的值
     #   3. 重启监控程序使配置生效
-    # 🔥 修改为ccxt以支持订单实时监听
+    # 🔥 使用 ccxt 实现（需要 ccxt >= 4.4.x）✅ 当前使用
     implementation: ccxt
     
     # 连接管理配置

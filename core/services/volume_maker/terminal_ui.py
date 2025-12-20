@@ -159,6 +159,41 @@ class VolumeMakerTerminalUI:
             "买入量", f"{stats.total_buy_volume:.6f} BTC", style="green")
         table.add_row("卖出量", f"{stats.total_sell_volume:.6f} BTC", style="red")
 
+        # 🔥 显示持仓盈亏（最后一行）
+        if hasattr(self.service, '_latest_position') and self.service._latest_position:
+            position = self.service._latest_position
+            pnl = self.service._position_pnl
+            pnl_change = self.service._position_pnl_change
+            
+            # 持仓方向和颜色
+            side = position.get('side', 'NONE')
+            side_icon = "📈" if side == "LONG" else "📉" if side == "SHORT" else "⚪"
+            side_color = "green" if side == "LONG" else "red" if side == "SHORT" else "dim"
+            
+            # 盈亏颜色
+            pnl_color = "green" if pnl >= 0 else "red"
+            pnl_icon = "💰" if pnl >= 0 else "💸"
+            
+            # 变化箭头
+            change_icon = "🔺" if pnl_change > 0 else "🔻" if pnl_change < 0 else "➡️"
+            
+            # 持仓信息
+            size = position.get('size', 0)
+            table.add_row(
+                "持仓",
+                f"{side_icon}{side} {size:.6f}",
+                style=side_color
+            )
+            
+            # 盈亏信息
+            table.add_row(
+                "未实现盈亏",
+                f"{pnl_icon}${pnl:.2f} {change_icon}${pnl_change:+.2f}",
+                style=f"bold {pnl_color}"
+            )
+        else:
+            table.add_row("持仓", "无", style="dim")
+
         return Panel(table, title="📈 交易量统计", border_style="yellow")
 
     def create_pnl_stats_panel(self, stats: VolumeMakerStatistics) -> Panel:
@@ -213,86 +248,111 @@ class VolumeMakerTerminalUI:
         return Panel(table, title="📊 价差统计", border_style="magenta")
 
     def create_orderbook_panel(self) -> Panel:
-        """创建实时订单簿面板"""
-        # 获取 WebSocket 订单簿数据
-        orderbook = self.service._latest_orderbook
+        """创建实时订单簿面板（显示两个交易所）"""
+        # 获取两个交易所的订单簿数据
+        signal_orderbook = getattr(self.service, '_signal_orderbook', None)
+        execution_orderbook = getattr(self.service, '_execution_orderbook', None)
 
-        # 获取订单簿获取方式
-        orderbook_method = self.service.config.orderbook_method.upper()
-
-        # 判断数据源状态
-        if orderbook_method == "WEBSOCKET":
-            ws_status = "🟢 实时" if self.service._ws_orderbook_subscribed else "🔴 未连接"
-            data_source = f"WebSocket {ws_status}"
-        else:
-            data_source = "REST API 📡"
-
+        # 获取交易所名称
+        signal_name = self.service.signal_adapter.__class__.__name__.replace("Adapter", "").upper()
+        
+        # 创建表格 - 显示两个交易所的订单簿
         table = Table(show_header=True, box=None, padding=(0, 1), expand=True)
-        table.add_column("卖单", style="red bold", width=25, justify="right")
+        
+        # 6列布局：信号源卖单 | 信号源买单 | 分隔 | 执行端卖单 | 执行端买单
+        table.add_column(f"{signal_name}卖", style="red", width=20, justify="right")
+        table.add_column(f"{signal_name}买", style="green", width=20)
         table.add_column("", width=2)  # 分隔符
-        table.add_column("买单", style="green bold", width=25)
+        table.add_column("LIGHTER卖", style="red", width=20, justify="right")
+        table.add_column("LIGHTER买", style="green", width=20)
 
-        if orderbook and orderbook.bids and orderbook.asks:
-            # 显示卖5到卖1（从上到下）
-            asks_to_show = list(reversed(orderbook.asks[:5]))  # 反转，让卖1在最下面
+        # 🔥 准备两个交易所的订单簿数据（各取5档）
+        def format_orderbook_data(orderbook):
+            """格式化单个交易所的订单簿"""
+            if orderbook and orderbook.bids and orderbook.asks:
+                # 卖单（卖5到卖1，从上到下）
+                asks = list(reversed(orderbook.asks[:5]))
+                # 买单（买1到买5）
+                bids = orderbook.bids[:5]
+                return asks, bids
+            return None, None
+        
+        signal_asks, signal_bids = format_orderbook_data(signal_orderbook)
+        execution_asks, execution_bids = format_orderbook_data(execution_orderbook)
 
-            # 补齐到5行
-            while len(asks_to_show) < 5:
-                asks_to_show.insert(0, None)
+        # 🔥 显示卖单部分（卖5...卖1）
+        for i in range(5):
+            # 信号源卖单
+            signal_ask = signal_asks[i] if signal_asks and i < len(signal_asks) else None
+            signal_ask_text = f"${signal_ask.price:,.2f}" if signal_ask else "-"
+            signal_ask_size = f"{signal_ask.size:.4f}" if signal_ask else ""
+            
+            # 执行端卖单
+            execution_ask = execution_asks[i] if execution_asks and i < len(execution_asks) else None
+            execution_ask_text = f"${execution_ask.price:,.2f}" if execution_ask else "-"
+            execution_ask_size = f"{execution_ask.size:.4f}" if execution_ask else ""
+            
+            table.add_row(
+                signal_ask_text,
+                signal_ask_size,
+                "│",
+                execution_ask_text,
+                execution_ask_size
+            )
+        
+        # 🔥 分隔线（中间价）
+        signal_mid = ""
+        execution_mid = ""
+        if signal_asks and signal_bids and signal_asks[-1] and signal_bids[0]:
+            mid_price = (signal_asks[-1].price + signal_bids[0].price) / 2
+            signal_mid = f"${mid_price:,.2f}"
+        if execution_asks and execution_bids and execution_asks[-1] and execution_bids[0]:
+            mid_price = (execution_asks[-1].price + execution_bids[0].price) / 2
+            execution_mid = f"${mid_price:,.2f}"
+        
+        table.add_row(
+            "─" * 18,
+            signal_mid,
+            "│",
+            "─" * 18,
+            execution_mid,
+            style="dim yellow"
+        )
 
-            # 卖单部分（卖5...卖1）
-            for i, ask in enumerate(asks_to_show):
-                if ask:
-                    ask_text = f"${ask.price:,.2f} × {ask.size:.4f}"
-                    table.add_row(ask_text, "", "")
-                else:
-                    table.add_row("-", "", "")
+        # 🔥 显示买单部分（买1...买5）
+        for i in range(5):
+            # 信号源买单
+            signal_bid = signal_bids[i] if signal_bids and i < len(signal_bids) else None
+            signal_bid_text = f"${signal_bid.price:,.2f}" if signal_bid else "-"
+            signal_bid_size = f"{signal_bid.size:.4f}" if signal_bid else ""
+            
+            # 执行端买单
+            execution_bid = execution_bids[i] if execution_bids and i < len(execution_bids) else None
+            execution_bid_text = f"${execution_bid.price:,.2f}" if execution_bid else "-"
+            execution_bid_size = f"{execution_bid.size:.4f}" if execution_bid else ""
+            
+            table.add_row(
+                signal_bid_text,
+                signal_bid_size,
+                "│",
+                execution_bid_text,
+                execution_bid_size
+            )
+        
+        # 🔥 底部显示更新时间
+        signal_time = signal_orderbook.timestamp.strftime('%H:%M:%S') if signal_orderbook else "N/A"
+        execution_time = execution_orderbook.timestamp.strftime('%H:%M:%S') if execution_orderbook else "N/A"
+        
+        table.add_row("", "", "│", "", "", end_section=True)
+        table.add_row(
+            "",
+            Text(f"🕒{signal_time}", style="dim", justify="center"),
+            "│",
+            "",
+            Text(f"🕒{execution_time}", style="dim", justify="center")
+        )
 
-            # 分隔线
-            table.add_row("─" * 23, "──", "─" * 23, style="dim")
-
-            # 买单部分（买1...买5）
-            bids_to_show = orderbook.bids[:5]
-
-            for bid in bids_to_show:
-                if bid:
-                    bid_text = f"${bid.price:,.2f} × {bid.size:.4f}"
-                    table.add_row("", "", bid_text)
-
-            # 补齐到5行
-            while len(bids_to_show) < 5:
-                table.add_row("", "", "-")
-
-            # 计算价差
-            if orderbook.asks and orderbook.bids:
-                spread = orderbook.asks[0].price - orderbook.bids[0].price
-                spread_pct = (
-                    spread / orderbook.bids[0].price * 100) if orderbook.bids[0].price > 0 else 0
-
-                # 底部显示价差信息
-                table.add_row("", "", "", end_section=True)
-                spread_info = f"价差: ${spread:.2f} ({spread_pct:.3f}%)"
-                table.add_row(
-                    Text(spread_info, style="yellow bold", justify="center"),
-                    "",
-                    Text(f"更新: {orderbook.timestamp.strftime('%H:%M:%S')}",
-                         style="dim", justify="center")
-                )
-        else:
-            # 无订单簿数据
-            table.add_row("", "", "")
-            table.add_row("", "", "")
-            table.add_row("", "📊", "", style="dim")
-            table.add_row("", Text("暂无数据", style="dim yellow"),
-                          "", style="dim")
-            table.add_row("", "", "")
-            table.add_row("", "", "")
-            if orderbook_method == "WEBSOCKET" and not self.service._ws_orderbook_subscribed:
-                table.add_row("", Text("等待WebSocket连接...", style="dim"), "")
-            elif orderbook_method == "REST":
-                table.add_row("", Text("等待数据加载...", style="dim"), "")
-
-        title = f"📖 实时订单簿 ({data_source})"
+        title = f"📖 实时订单簿 - {signal_name} vs LIGHTER"
         return Panel(table, title=title, border_style="blue")
 
     def create_recent_trades_panel(self, stats: VolumeMakerStatistics) -> Panel:

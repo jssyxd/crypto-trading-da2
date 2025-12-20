@@ -1,0 +1,26 @@
+# ============================================================================
+# Lighter ETH 现货合约套利监控配置（ETH/USDC ↔ ETH 多腿套利专用）
+# ============================================================================
+# 
+# 用途: Lighter 交易所内 ETH 现货 ↔ ETH 合约同所多腿套利
+# 启动: python main_unified.py --monitor-config config/arbitrage/monitor_lighter_eth_spot.yaml
+# 虚拟环境: source .venv-lighter-spot/bin/activate
+# ============================================================================
+
+# ✅ 交易所配置（unified_orchestrator.py:631 使用）
+exchanges:
+  - lighter
+
+# ✅ 监控的交易对（unified_orchestrator.py:632,831,2699 使用）
+# 💡 不需要在这里配置 ETH 和 ETH/USDC，它们通过 extra_symbols.yaml 自动订阅
+symbols: []
+
+# ✅ UI刷新配置（unified_orchestrator.py:640 使用）
+performance:
+  ui_refresh_interval_ms: 1000  # UI刷新间隔（毫秒）
+
+# ✅ Debug CLI 模式配置（unified_orchestrator.py:619,650 使用）
+# 注意：启用后会关闭富UI，改用CLI输出
+debug_cli:
+  enabled: false                # 是否启用CLI调试模式（false=使用富UI）
+  interval_seconds: 1.0         # CLI打印间隔（秒）

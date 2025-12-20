@@ -5,11 +5,30 @@
 实时监控多交易所价差和资金费率，识别套利机会。
 """
 
+# 🔥 加载环境变量（必须在其他导入之前）
+from dotenv import load_dotenv
+from pathlib import Path as EnvPath
+env_path = EnvPath(__file__).parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+
+from core.services.arbitrage_monitor.utils import SimpleSymbolConverter
+from core.adapters.exchanges.factory import get_exchange_factory
+from core.services.arbitrage_monitor import ArbitrageMonitorService, ArbitrageConfig
+from rich.layout import Layout
+from rich.live import Live
+from rich import box
+from rich.text import Text
+from rich.panel import Panel
+from rich.table import Table
+from rich.console import Console, Group
 import asyncio
 import sys
 import signal
 import logging
 import yaml
+import os
+import time
 from pathlib import Path
 from decimal import Decimal
 from datetime import datetime
@@ -17,21 +36,18 @@ from collections import deque
 from typing import Optional, Dict, Any
 from logging.handlers import RotatingFileHandler
 
+# 🔥 网络流量监控（使用psutil）
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
+
 # 添加项目根目录到路径
 sys.path.insert(0, str(Path(__file__).parent))
 
-from rich.console import Console, Group
-from rich.table import Table
-from rich.panel import Panel
-from rich.text import Text
-from rich import box
-from rich.live import Live
-from rich.layout import Layout
 
-from core.services.arbitrage_monitor import ArbitrageMonitorService, ArbitrageConfig
-from core.adapters.exchanges.factory import get_exchange_factory
 # 🔥 极简符号转换器（套利系统专用）
-from core.services.arbitrage_monitor.utils import SimpleSymbolConverter
 
 
 class UILogHandler(logging.Handler):
@@ -93,8 +109,27 @@ class ArbitrageMonitorApp:
         self.sort_interval_seconds: int = 60  # 排序更新间隔（秒）
         
         # 🔥 费率差异持续时间跟踪系统
-        self.rate_diff_tracking: Dict[str, Dict[str, Any]] = {}  # {symbol: {start_time, last_diff}}
+        # {symbol: {start_time, last_diff}}
+        self.rate_diff_tracking: Dict[str, Dict[str, Any]] = {}
         self.rate_diff_threshold: float = 50.0  # 年化费率差阈值（百分比）
+        
+        # 🔥 网络流量监控（使用psutil）
+        self.network_stats_enabled = PSUTIL_AVAILABLE
+        self.process = None
+        self.network_start_time = None
+        self.network_start_bytes_sent = 0
+        self.network_start_bytes_recv = 0
+        if self.network_stats_enabled:
+            try:
+                self.process = psutil.Process(os.getpid())
+                # 🔥 使用psutil的网络IO统计（而不是磁盘IO）
+                net_io = psutil.net_io_counters()
+                self.network_start_time = time.time()
+                self.network_start_bytes_sent = net_io.bytes_sent
+                self.network_start_bytes_recv = net_io.bytes_recv
+            except Exception as e:
+                self.logger.warning(f"⚠️  网络流量监控初始化失败: {e}")
+                self.network_stats_enabled = False
         
         # 设置日志（先基础配置）
         logging.basicConfig(
@@ -141,6 +176,8 @@ class ArbitrageMonitorApp:
                 'core.services.arbitrage_monitor',
                 'core.adapters.exchanges.adapters.edgex_websocket',
                 'core.adapters.exchanges.adapters.lighter_websocket',
+                'ExchangeAdapter.edgex',  # 🔥 EdgeX适配器的logger名称
+                'ExchangeAdapter.lighter',  # Lighter适配器的logger名称
             ]
             
             # 🔥 为root logger添加文件处理器（捕获所有日志）
@@ -152,8 +189,18 @@ class ArbitrageMonitorApp:
             for module_name in key_modules:
                 module_logger = logging.getLogger(module_name)
                 
+                # 🔥 设置logger级别（确保至少是INFO）
+                module_logger.setLevel(logging.INFO)
+                
                 # 🔥 添加文件日志处理器（写入文件）
                 if file_handler not in module_logger.handlers:
+                    module_logger.addHandler(file_handler)
+                
+                # 🔥 确保propagate=True，让日志也能传播到root logger（如果logger没有自己的handler）
+                # 注意：如果logger已经有handler（如ExchangeAdapter.edgex），propagate=False也可以
+                # 但我们需要确保文件handler已添加
+                if not any(isinstance(h, RotatingFileHandler) for h in module_logger.handlers):
+                    # 如果没有文件handler，添加一个
                     module_logger.addHandler(file_handler)
                 
                 # 添加UI日志处理器
@@ -171,6 +218,8 @@ class ArbitrageMonitorApp:
                 'core.services.arbitrage_monitor',
                 'core.adapters.exchanges.adapters.edgex_websocket',
                 'core.adapters.exchanges.adapters.lighter_websocket',
+                'ExchangeAdapter.edgex',  # 🔥 EdgeX适配器的logger名称
+                'ExchangeAdapter.lighter',  # Lighter适配器的logger名称
             ]
             
             # 禁用root logger的控制台输出
@@ -281,6 +330,67 @@ class ArbitrageMonitorApp:
         
         return self._format_duration(duration_seconds)
     
+    def _get_network_stats(self) -> Dict[str, Any]:
+        """
+        获取网络流量统计
+        
+        Returns:
+            包含网络流量信息的字典
+        """
+        if not self.network_stats_enabled or not self.process:
+            return {"enabled": False}
+        
+        try:
+            # 🔥 使用psutil的网络IO统计（而不是磁盘IO）
+            net_io = psutil.net_io_counters()
+            current_time = time.time()
+            
+            # 计算总流量（从启动开始）
+            total_sent = net_io.bytes_sent - self.network_start_bytes_sent
+            total_recv = net_io.bytes_recv - self.network_start_bytes_recv
+            total_bytes = total_sent + total_recv
+            
+            # 计算运行时间
+            elapsed_seconds = current_time - self.network_start_time if self.network_start_time else 0
+            
+            # 计算平均速率（字节/秒）
+            avg_sent_rate = total_sent / elapsed_seconds if elapsed_seconds > 0 else 0
+            avg_recv_rate = total_recv / elapsed_seconds if elapsed_seconds > 0 else 0
+            avg_total_rate = avg_sent_rate + avg_recv_rate
+            
+            def format_bytes(bytes_count: float) -> str:
+                """格式化字节数为可读格式"""
+                if bytes_count < 1024:
+                    return f"{bytes_count:.0f}B"
+                elif bytes_count < 1024 * 1024:
+                    return f"{bytes_count / 1024:.2f}KB"
+                elif bytes_count < 1024 * 1024 * 1024:
+                    return f"{bytes_count / (1024 * 1024):.2f}MB"
+                else:
+                    return f"{bytes_count / (1024 * 1024 * 1024):.2f}GB"
+            
+            def format_rate(bytes_per_sec: float) -> str:
+                """格式化速率为可读格式"""
+                if bytes_per_sec < 1024:
+                    return f"{bytes_per_sec:.0f}B/s"
+                elif bytes_per_sec < 1024 * 1024:
+                    return f"{bytes_per_sec / 1024:.2f}KB/s"
+                else:
+                    return f"{bytes_per_sec / (1024 * 1024):.2f}MB/s"
+            
+            return {
+                "enabled": True,
+                "total_sent": format_bytes(total_sent),
+                "total_recv": format_bytes(total_recv),
+                "total_bytes": format_bytes(total_bytes),
+                "avg_sent_rate": format_rate(avg_sent_rate),
+                "avg_recv_rate": format_rate(avg_recv_rate),
+                "avg_total_rate": format_rate(avg_total_rate),
+            }
+        except Exception as e:
+            self.logger.debug(f"获取网络流量统计失败: {e}")
+            return {"enabled": False, "error": str(e)}
+    
     def load_config(self):
         """加载配置"""
         with open(self.config_path, 'r', encoding='utf-8') as f:
@@ -317,7 +427,8 @@ class ArbitrageMonitorApp:
                     self.logger.info(f"✅ {exchange_name} 初始化成功（使用配置文件）")
                 except Exception as config_error:
                     # 如果配置文件失败，尝试"公开数据模式"（无需API密钥）
-                    self.logger.warning(f"⚠️  {exchange_name} 配置文件加载失败: {config_error}")
+                    self.logger.warning(
+                        f"⚠️  {exchange_name} 配置文件加载失败: {config_error}")
                     self.logger.info(f"🔄 尝试公开数据模式...")
                     
                     # 创建虚拟配置（用于公开数据访问）
@@ -367,35 +478,43 @@ class ArbitrageMonitorApp:
                                 await asyncio.sleep(12)  # 降级方案：等待metadata自动到达
                         
                         raw_symbols = await adapter.get_supported_symbols()
-                        self.logger.info(f"🔍 {exchange_name} 原始symbols数量: {len(raw_symbols)}")
+                        self.logger.info(
+                            f"🔍 {exchange_name} 原始symbols数量: {len(raw_symbols)}")
                         
                         if len(raw_symbols) == 0:
                             print(f"❌ {exchange_name}: 未获取到交易对！")
                             self.logger.warning(f"{exchange_name} 未获取到任何交易对")
                         else:
                             # 🔥 显示前5个原始symbol（调试用）
-                            sample_raw = raw_symbols[:5] if len(raw_symbols) >= 5 else raw_symbols
+                            sample_raw = raw_symbols[:5] if len(
+                                raw_symbols) >= 5 else raw_symbols
                             print(f"   📋 前5个原始symbol: {', '.join(sample_raw)}")
                         
                         standard_symbols = set()
                         for raw_symbol in raw_symbols:
                             try:
-                                std_symbol = self.symbol_converter.convert_from_exchange(raw_symbol, exchange_name)
-                                if std_symbol.endswith('-PERP') or std_symbol.endswith('-USDC-PERP'):  # 永续合约
+                                std_symbol = self.symbol_converter.convert_from_exchange(
+                                    raw_symbol, exchange_name)
+                                # 永续合约
+                                if std_symbol.endswith('-PERP') or std_symbol.endswith('-USDC-PERP'):
                                     standard_symbols.add(std_symbol)
                             except Exception as convert_error:
                                 # 转换失败，忽略
                                 pass
                         
                         exchange_symbols[exchange_name] = standard_symbols
-                        self.logger.info(f"📊 {exchange_name} 支持 {len(standard_symbols)} 个永续合约")
+                        self.logger.info(
+                            f"📊 {exchange_name} 支持 {len(standard_symbols)} 个永续合约")
                         
                         if len(standard_symbols) > 0:
-                            print(f"✅ {exchange_name}: 发现 {len(raw_symbols)} 个交易对 → {len(standard_symbols)} 个永续合约")
+                            print(
+                                f"✅ {exchange_name}: 发现 {len(raw_symbols)} 个交易对 → {len(standard_symbols)} 个永续合约")
                         else:
-                            print(f"⚠️  {exchange_name}: {len(raw_symbols)} 个交易对中没有永续合约")
+                            print(
+                                f"⚠️  {exchange_name}: {len(raw_symbols)} 个交易对中没有永续合约")
                     except Exception as e:
-                        self.logger.error(f"⚠️  无法获取 {exchange_name} 支持的symbol: {e}")
+                        self.logger.error(
+                            f"⚠️  无法获取 {exchange_name} 支持的symbol: {e}")
                         print(f"❌ {exchange_name}: 获取symbol失败 - {e}")  # 临时调试
                         import traceback
                         self.logger.error(traceback.format_exc())
@@ -414,14 +533,16 @@ class ArbitrageMonitorApp:
         
         # 🔥 第3步：计算重叠的symbol
         print(f"\n📊 交易所symbol统计:")
-        self.logger.info(f"📊 exchange_symbols 字典内容: {list(exchange_symbols.keys())}")
+        self.logger.info(
+            f"📊 exchange_symbols 字典内容: {list(exchange_symbols.keys())}")
         for ex_name, symbols in exchange_symbols.items():
             print(f"   {ex_name}: {len(symbols)} 个永续合约")
             self.logger.info(f"   - {ex_name}: {len(symbols)} 个symbol")
         
         if len(exchange_symbols) >= 2:
             # 计算交集
-            common_symbols = set.intersection(*exchange_symbols.values()) if exchange_symbols else set()
+            common_symbols = set.intersection(
+                *exchange_symbols.values()) if exchange_symbols else set()
             print(f"\n🔍 发现 {len(common_symbols)} 个重叠永续合约")
             self.logger.info(f"🔍 发现 {len(common_symbols)} 个重叠symbol")
             
@@ -437,14 +558,17 @@ class ArbitrageMonitorApp:
                 sorted_symbols = sorted(list(common_symbols))
                 self.config['symbols'] = sorted_symbols  # 使用所有重叠symbol
                 print(f"✅ 最终监控 {len(self.config['symbols'])} 个交易对\n")
-                self.logger.info(f"✅ 使用 {len(self.config['symbols'])} 个重叠symbol")
-                self.logger.info(f"   前10个: {', '.join(self.config['symbols'][:10])}")
+                self.logger.info(
+                    f"✅ 使用 {len(self.config['symbols'])} 个重叠symbol")
+                self.logger.info(
+                    f"   前10个: {', '.join(self.config['symbols'][:10])}")
             else:
                 print("⚠️  没有发现重叠symbol，使用配置文件中的symbol\n")
                 self.logger.warning("⚠️  没有发现重叠symbol，使用配置文件中的symbol")
         else:
             print(f"⚠️  交易所数量不足（{len(exchange_symbols)}），需要至少2个\n")
-            self.logger.warning(f"⚠️  exchange_symbols 数量不足（{len(exchange_symbols)}），需要至少2个")
+            self.logger.warning(
+                f"⚠️  exchange_symbols 数量不足（{len(exchange_symbols)}），需要至少2个")
         
         # 第4步：创建监控服务
         print(f"\n🔧 创建监控服务配置:")
@@ -455,9 +579,12 @@ class ArbitrageMonitorApp:
         arbitrage_config = ArbitrageConfig(
             exchanges=list(self.adapters.keys()),
             symbols=self.config['symbols'],
-            price_spread_threshold=Decimal(str(self.config['thresholds']['price_spread'])),
-            funding_rate_threshold=Decimal(str(self.config['thresholds']['funding_rate'])),
-            min_score_threshold=Decimal(str(self.config['thresholds']['min_score'])),
+            price_spread_threshold=Decimal(
+                str(self.config['thresholds']['price_spread'])),
+            funding_rate_threshold=Decimal(
+                str(self.config['thresholds']['funding_rate'])),
+            min_score_threshold=Decimal(
+                str(self.config['thresholds']['min_score'])),
             update_interval=self.config['monitoring']['update_interval'],
             refresh_rate=self.config['display']['refresh_rate'],
             max_opportunities=self.config['display']['max_opportunities'],
@@ -548,15 +675,18 @@ class ArbitrageMonitorApp:
         title_text.append("🎯 ", style="bold yellow")
         title_text.append("套利监控系统", style="bold green")
         title_text.append(" - ", style="dim")
-        title_text.append(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), style="bold cyan")
+        title_text.append(datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"), style="bold cyan")
         
         # 🔥 显示下次排序倒计时
         if self.last_sort_time is not None:
-            time_since_sort = (datetime.now() - self.last_sort_time).total_seconds()
+            time_since_sort = (
+                datetime.now() - self.last_sort_time).total_seconds()
             time_until_next_sort = self.sort_interval_seconds - time_since_sort
             if time_until_next_sort > 0:
                 title_text.append(" | ", style="dim")
-                title_text.append(f"下次排序: {int(time_until_next_sort)}秒", style="bold magenta")
+                title_text.append(
+                    f"下次排序: {int(time_until_next_sort)}秒", style="bold magenta")
             else:
                 title_text.append(" | ", style="dim")
                 title_text.append("正在排序...", style="bold yellow")
@@ -597,38 +727,118 @@ class ArbitrageMonitorApp:
         # 统计信息
         stats = self.monitor_service.get_statistics()
         stats_text = Text()
-        stats_text.append(f"交易所: {stats['total_exchanges']}  ", style="bold cyan")
-        stats_text.append(f"监控: {stats['monitored_symbols']}对  ", style="bold green")
-        stats_text.append(f"机会: {stats['active_opportunities']}  ", style="bold yellow")
-        stats_text.append(f"数据: {stats['ticker_data_count']}", style="bold magenta")
-        # 🔥 显示配置的symbol数量（调试用）
-        if hasattr(self, 'config') and 'symbols' in self.config:
-            stats_text.append(f" [配置:{len(self.config['symbols'])}]", style="dim")
+        stats_text.append(
+            f"交易所: {stats['total_exchanges']}  ", style="bold cyan")
+        stats_text.append(
+            f"监控: {stats['monitored_symbols']}对  ", style="bold green")
+        stats_text.append(
+            f"机会: {stats['active_opportunities']}  ", style="bold yellow")
+        stats_text.append(
+            f"数据: {stats['ticker_data_count']}", style="bold magenta")
+
+        # 🔥 显示各交易所连接健康状态
+        if 'exchange_health' in stats:
+            stats_text.append("\n", style="")
+            for exchange_name, health in stats['exchange_health'].items():
+                # 状态图标和颜色
+                status = health['status']
+                if status == 'healthy':
+                    status_icon = "✅"
+                    status_style = "bold green"
+                elif status == 'degraded':
+                    status_icon = "⚠️"
+                    status_style = "bold yellow"
+                elif status == 'reconnecting':
+                    status_icon = "🔄"
+                    status_style = "bold blue"
+                else:  # unhealthy
+                    status_icon = "❌"
+                    status_style = "bold red"
+
+                # 显示交易所名称和健康比例
+                stats_text.append(f"{exchange_name}: ", style="bold cyan")
+                stats_text.append(
+                    f"{status_icon} {health['healthy_count']}/{health['total_count']} ",
+                    style=status_style
+                )
         
-        # 套利机会表格
+                # 显示重连次数（如果有）
+                if health['reconnect_count'] > 0:
+                    stats_text.append(
+                        f"(重连×{health['reconnect_count']}) ",
+                        style="dim yellow"
+                    )
+
+                stats_text.append("  ", style="")
+        
+        # 🔥 显示网络流量统计（置顶位置）
+        network_stats = self._get_network_stats()
+        if network_stats.get("enabled"):
+            stats_text.append("\n", style="")
+            stats_text.append("📡 网络流量: ", style="bold cyan")
+            stats_text.append(
+                f"↑{network_stats['total_sent']} ",
+                style="bold yellow"
+            )
+            stats_text.append(
+                f"↓{network_stats['total_recv']} ",
+                style="bold green"
+            )
+            stats_text.append(
+                f"({network_stats['avg_total_rate']})",
+                style="dim"
+            )
+        elif not PSUTIL_AVAILABLE:
+            # 🔥 如果psutil不可用，显示提示信息
+            stats_text.append("\n", style="")
+            stats_text.append("📡 网络流量: ", style="bold cyan")
+            stats_text.append(
+                "[dim]未启用 (需要安装psutil: pip install psutil)[/dim]",
+                style="dim"
+            )
+        
+        # 🚀 显示性能指标（队列状态和处理延迟）
+        if 'performance_metrics' in stats:
+            metrics = stats['performance_metrics']
+            stats_text.append("\n", style="")
+            stats_text.append("⚡ 性能指标: ", style="bold cyan")
+            
+            # 队列积压情况
+            orderbook_q = metrics.get('orderbook_queue_size', 0)
+            ticker_q = metrics.get('ticker_queue_size', 0)
+            analysis_q = metrics.get('analysis_queue_size', 0)
+            
+            # 根据队列大小显示不同颜色
+            q_style = "bold green" if (orderbook_q + ticker_q < 50) else "bold yellow" if (orderbook_q + ticker_q < 200) else "bold red"
+            stats_text.append(
+                f"队列[订单簿:{orderbook_q} Ticker:{ticker_q} 分析:{analysis_q}] ",
+                style=q_style
+            )
+            
+            # 分析延迟
+            latency = metrics.get('last_analysis_latency_ms', 0)
+            latency_style = "bold green" if latency < 50 else "bold yellow" if latency < 100 else "bold red"
+            stats_text.append(
+                f"分析延迟:{latency:.1f}ms ",
+                style=latency_style
+            )
+            
+            # 处理量统计
+            orderbook_processed = metrics.get('orderbook_processed', 0)
+            ticker_processed = metrics.get('ticker_processed', 0)
+            stats_text.append(
+                f"[已处理 订单簿:{orderbook_processed} Ticker:{ticker_processed}]",
+                style="dim"
+            )
+
+        # 🔥 套利机会只记录到日志，不显示表格（用户要求：表格太占空间）
         opportunities = self.monitor_service.get_opportunities()
-        
-        # 🔥 在标题中显示总机会数和显示数量
-        opp_count = len(opportunities) if opportunities else 0
-        table_title = f"🎯 套利机会 (显示前5条/共{opp_count}条) - {datetime.now().strftime('%H:%M:%S')}"
-        
-        table = Table(
-            title=table_title,
-            box=box.ROUNDED,
-            show_header=True,
-            header_style="bold magenta"
-        )
-        
-        table.add_column("交易对", style="cyan", width=15)
-        table.add_column("类型", style="yellow", width=10)
-        table.add_column("买入", style="green", width=10)
-        table.add_column("卖出", style="red", width=10)
-        table.add_column("价差%", style="bold yellow", justify="right", width=10)
-        table.add_column("评分", style="bold magenta", justify="right", width=10)
-        
+
+        # 记录套利机会到日志（供文件查看）
         if opportunities:
-            # 🔥 只显示前5条套利机会，为价格表格留出空间
-            for opp in opportunities[:5]:
+            opp_count = len(opportunities)
+            # 只记录评分最高的前3条到日志
+            for opp in opportunities[:3]:
                 type_str = "价差" if opp.opportunity_type == "price_spread" else \
                           "费率" if opp.opportunity_type == "funding_rate" else "组合"
                 
@@ -644,48 +854,58 @@ class ArbitrageMonitorApp:
                     buy_ex = sell_ex = spread_pct = "-"
                 
                 score = f"{float(opp.score):.4f}"
-                style = "bold green" if opp.score >= Decimal("0.01") else "green" if opp.score >= Decimal("0.005") else "white"
-                
-                table.add_row(opp.symbol, type_str, buy_ex, sell_ex, spread_pct, score, style=style)
-        else:
-            table.add_row("暂无套利机会", "-", "-", "-", "-", "-", style="dim")
+
+                # 记录到日志文件
+                self.logger.info(
+                    f"套利机会: {opp.symbol} | {type_str} | 买入:{buy_ex} 卖出:{sell_ex} | 价差:{spread_pct} | 评分:{score}")
         
         # 价格表格
         if self.config['display']['show_all_prices']:
             # 🔥 添加数据就绪状态提示
             total_symbols = len(self.config['symbols'])
-            ready_symbols = len([s for s in self.config['symbols'] if self.monitor_service.get_current_prices(s)])
-            data_ready_pct = (ready_symbols / total_symbols * 100) if total_symbols > 0 else 0
+            ready_symbols = len(
+                [s for s in self.config['symbols'] if self.monitor_service.get_current_prices(s)])
+            data_ready_pct = (ready_symbols / total_symbols *
+                              100) if total_symbols > 0 else 0
             
             if data_ready_pct < 100:
                 price_table_title = f"💰 实时价格 & 资金费率 [数据准备中: {ready_symbols}/{total_symbols} ({data_ready_pct:.0f}%)]"
             else:
                 price_table_title = "💰 实时价格 & 资金费率"
             
-            price_table = Table(title=price_table_title, box=box.SIMPLE, show_header=True, header_style="bold cyan")
-            price_table.add_column("交易对", style="cyan", width=15)
+            price_table = Table(title=price_table_title, box=box.SIMPLE,
+                                show_header=True, header_style="bold cyan")
+            price_table.add_column("交易对", style="cyan", width=18)  # 🔥 宽屏优化：从15增加到18
             
+            # 🔥 改造：显示买1/卖1价格和数量（宽屏优化）
             for exchange in self.config['exchanges']:
-                price_table.add_column(f"{exchange.upper()}\n价格", justify="right", width=12)
+                price_table.add_column(
+                    f"{exchange.upper()}\n买1/卖1", justify="right", width=36)  # 🔥 宽度从24增加到36，适配宽屏
                 if self.config['display'].get('show_funding_rates', True):
-                    price_table.add_column(f"{exchange.upper()}\n8h/年化", justify="right", width=16)
+                    price_table.add_column(
+                        f"{exchange.upper()}\n8h/年化", justify="right", width=18)  # 🔥 宽度从16增加到18
             
-            price_table.add_column("价差%", style="yellow", justify="right", width=10)
+            price_table.add_column("价差%", style="yellow",
+                                   justify="right", width=12)  # 🔥 宽度从10增加到12
             
             # 🔥 添加费率差列（8小时 + 年化）
             if self.config['display'].get('show_funding_rates', True) and len(self.config['exchanges']) >= 2:
-                price_table.add_column("费率差\n8h/年化", style="magenta", justify="right", width=16)
+                price_table.add_column(
+                    "费率差\n8h/年化", style="magenta", justify="right", width=20)  # 🔥 宽度从16增加到20
                 # 🔥 添加持续时间列（当年化差>50%时显示）
-                price_table.add_column("持续\n时间", style="bold red", justify="center", width=8)
+                price_table.add_column(
+                    "持续\n时间", style="bold red", justify="center", width=10)  # 🔥 宽度从8增加到10
                 # 🔥 添加同向列
-                price_table.add_column("同向", style="bold cyan", justify="center", width=6)
+                price_table.add_column(
+                    "同向", style="bold cyan", justify="center", width=8)  # 🔥 宽度从6增加到8
             
             # 🔥 第1步：收集所有数据并计算价差（实时数据）
             symbol_data_dict = {}  # 使用dict方便按symbol查找
             
             for symbol in self.config['symbols']:
-                prices = self.monitor_service.get_current_prices(symbol)
-                if not prices:
+                # 🔥 获取订单簿价格（改造后返回 {exchange: {"bid": ..., "ask": ..., ...}}）
+                orderbook_prices = self.monitor_service.get_current_prices(symbol)
+                if not orderbook_prices:
                     continue
                 
                 # 获取funding_rates
@@ -696,25 +916,32 @@ class ArbitrageMonitorApp:
                         funding_rate = ticker_data[exchange][symbol].funding_rate
                         funding_rates[exchange] = funding_rate
                 
-                price_values = []
-                for exchange in self.config['exchanges']:
-                    price = prices.get(exchange)
-                    if price:
-                        price_values.append(price)
-                
-                # 计算价差用于排序
+                # 🔥 计算有利可图的价差（用于排序）
+                # 只计算正向套利机会（买1价 > 卖1价）
                 spread_value = 0
-                if len(price_values) >= 2:
-                    max_price = max(price_values)
-                    min_price = min(price_values)
-                    spread_value = float(((max_price - min_price) / min_price) * Decimal("100"))
+                if len(orderbook_prices) >= 2:
+                    # 尝试所有交易所两两组合，找到最大正价差
+                    from itertools import combinations
+                    for ex1, ex2 in combinations(orderbook_prices.keys(), 2):
+                        book1 = orderbook_prices[ex1]
+                        book2 = orderbook_prices[ex2]
+                        
+                        # 正向套利1：在ex1买入（ask1），在ex2卖出（bid2）
+                        if book2["bid"] > book1["ask"]:
+                            spread = float(((book2["bid"] - book1["ask"]) / book1["ask"]) * Decimal("100"))
+                            spread_value = max(spread_value, spread)
+                        
+                        # 正向套利2：在ex2买入（ask2），在ex1卖出（bid1）
+                        if book1["bid"] > book2["ask"]:
+                            spread = float(((book1["bid"] - book2["ask"]) / book2["ask"]) * Decimal("100"))
+                            spread_value = max(spread_value, spread)
                 
                 # 保存数据（使用dict，key为symbol）
                 symbol_data_dict[symbol] = {
                     'symbol': symbol,
-                    'prices': prices,
+                    'orderbook_prices': orderbook_prices,  # 🔥 改为订单簿价格
                     'funding_rates': funding_rates,
-                    'spread_value': spread_value
+                    'spread_value': spread_value  # 🔥 只保存有利可图的价差
                 }
             
             # 🔥 第2步：检查是否需要重新排序（每60秒更新一次排序）
@@ -727,26 +954,45 @@ class ArbitrageMonitorApp:
                 self.logger.info("首次排序价格表格")
             else:
                 # 检查距离上次排序是否超过60秒
-                time_since_last_sort = (current_time - self.last_sort_time).total_seconds()
+                time_since_last_sort = (
+                    current_time - self.last_sort_time).total_seconds()
                 if time_since_last_sort >= self.sort_interval_seconds:
                     need_resort = True
-                    self.logger.info(f"距离上次排序已过 {time_since_last_sort:.0f} 秒，重新排序")
+                    self.logger.info(
+                        f"距离上次排序已过 {time_since_last_sort:.0f} 秒，重新排序")
             
             # 🔥 优化：如果有数据且需要排序，立即排序；如果是首次且数据少，也先排序显示
             if len(symbol_data_dict) > 0 and (need_resort or (self.last_sort_time is None and len(symbol_data_dict) >= 3)):
                 # 需要重新排序：按价差从高到低排序
                 symbol_data_list = list(symbol_data_dict.values())
-                symbol_data_list.sort(key=lambda x: x['spread_value'], reverse=True)
+
+                # 🔥 自定义排序：BTC 和 ETH 永远置顶
+                def sort_key(data):
+                    symbol = data['symbol']
+                    # BTC 系列置顶（优先级最高）
+                    if 'BTC' in symbol.upper():
+                        return (0, -data['spread_value'])  # 0 = 最高优先级，按价差降序
+                    # ETH 系列第二（优先级次高）
+                    elif 'ETH' in symbol.upper():
+                        return (1, -data['spread_value'])  # 1 = 次高优先级，按价差降序
+                    # 其他代币按价差降序排列
+                    else:
+                        return (2, -data['spread_value'])  # 2 = 普通优先级
+
+                symbol_data_list.sort(key=sort_key)
                 
                 # 更新缓存
-                self.sorted_symbols_cache = [data['symbol'] for data in symbol_data_list]
+                self.sorted_symbols_cache = [data['symbol']
+                                             for data in symbol_data_list]
                 self.last_sort_time = current_time
                 
-                self.logger.info(f"排序完成，共{len(self.sorted_symbols_cache)}个交易对，前5名: {', '.join(self.sorted_symbols_cache[:5])}")
+                self.logger.info(
+                    f"排序完成，共{len(self.sorted_symbols_cache)}个交易对，前5名: {', '.join(self.sorted_symbols_cache[:5])}")
             
             # 🔥 第3步：按缓存的排序顺序显示（数据是实时的）
             # 如果缓存为空，使用当前可用数据的顺序
-            symbols_to_display = self.sorted_symbols_cache if self.sorted_symbols_cache else list(symbol_data_dict.keys())
+            symbols_to_display = self.sorted_symbols_cache if self.sorted_symbols_cache else list(
+                symbol_data_dict.keys())
             
             for symbol in symbols_to_display:
                 # 从dict中获取该symbol的最新数据
@@ -755,23 +1001,24 @@ class ArbitrageMonitorApp:
                 
                 data = symbol_data_dict[symbol]
                 symbol = data['symbol']
-                prices = data['prices']
+                orderbook_prices = data['orderbook_prices']  # 🔥 改为订单簿价格
                 funding_rates = data['funding_rates']
                 
-                price_values = []
+                # 🔥 存储订单簿数据（用于后续计算同向）
+                orderbook_values = []  # [{bid, ask, bid_size, ask_size} or None]
                 funding_rate_values = []
                 row = []  # 初始化row（不包含symbol，最后再添加）
                 
                 # 🔥 预先计算费率差，用于判断是否高亮显示
                 has_high_rate_diff = False
                 
-                # 🔥 第一步：收集价格和资金费率数据
+                # 🔥 第一步：收集订单簿价格和资金费率数据
                 for exchange in self.config['exchanges']:
-                    price = prices.get(exchange)
-                    if price:
-                        price_values.append(price)
+                    orderbook = orderbook_prices.get(exchange)
+                    if orderbook:
+                        orderbook_values.append(orderbook)  # {bid, ask, bid_size, ask_size}
                     else:
-                        price_values.append(None)
+                        orderbook_values.append(None)
                     
                     if self.config['display'].get('show_funding_rates', True):
                         funding_rate = funding_rates.get(exchange)
@@ -783,20 +1030,26 @@ class ArbitrageMonitorApp:
                 price_short_idx = None
                 
                 if (len(self.config['exchanges']) >= 2 and 
-                    len([p for p in price_values if p is not None]) >= 2 and
+                    len([ob for ob in orderbook_values if ob is not None]) >= 2 and
                     len([fr for fr in funding_rate_values if fr is not None]) >= 2):
                     
-                    # 1. 价差方向：价格低的做多
-                    valid_prices = [(i, p) for i, p in enumerate(price_values) if p is not None]
-                    if len(valid_prices) >= 2:
-                        min_price_tuple = min(valid_prices, key=lambda x: x[1])
-                        max_price_tuple = max(valid_prices, key=lambda x: x[1])
-                        price_long_idx = min_price_tuple[0]
-                        price_short_idx = max_price_tuple[0]
+                    # 1. 🔥 价差方向：使用中间价（bid+ask）/2来判断做多做空方向
+                    valid_mid_prices = []
+                    for i, ob in enumerate(orderbook_values):
+                        if ob is not None:
+                            mid_price = (ob["bid"] + ob["ask"]) / Decimal("2")
+                            valid_mid_prices.append((i, mid_price))
+                    
+                    if len(valid_mid_prices) >= 2:
+                        min_price_tuple = min(valid_mid_prices, key=lambda x: x[1])
+                        max_price_tuple = max(valid_mid_prices, key=lambda x: x[1])
+                        price_long_idx = min_price_tuple[0]  # 价格低的做多
+                        price_short_idx = max_price_tuple[0]  # 价格高的做空
                         price_long_ex = self.config['exchanges'][price_long_idx]
                         
                         # 2. 资金费率方向：费率低（数学上小）的做多
-                        valid_frs = [(i, fr) for i, fr in enumerate(funding_rate_values) if fr is not None]
+                        valid_frs = [(i, fr) for i, fr in enumerate(
+                            funding_rate_values) if fr is not None]
                         if len(valid_frs) >= 2:
                             min_fr_tuple = min(valid_frs, key=lambda x: x[1])
                             fr_long_ex = self.config['exchanges'][min_fr_tuple[0]]
@@ -805,21 +1058,33 @@ class ArbitrageMonitorApp:
                             if price_long_ex == fr_long_ex:
                                 same_direction = True
                 
-                # 🔥 第三步：构建row，根据同向应用颜色
+                # 🔥 第三步：构建row，显示买1/卖1价格，根据同向应用颜色
                 for idx, exchange in enumerate(self.config['exchanges']):
-                    price = price_values[idx] if idx < len(price_values) else None
+                    orderbook = orderbook_values[idx] if idx < len(
+                        orderbook_values) else None
                     
-                    if price is not None:
+                    if orderbook is not None:
                         # 🔥 动态精度：根据价格大小决定显示位数
-                        precision = self._get_price_precision(float(price))
-                        price_str = f"{float(price):,.{precision}f}"
+                        bid_price = float(orderbook["bid"])
+                        ask_price = float(orderbook["ask"])
+                        bid_size = float(orderbook["bid_size"])
+                        ask_size = float(orderbook["ask_size"])
+                        
+                        precision = self._get_price_precision(bid_price)
+                        
+                        # 🔥 格式化买卖价和数量
+                        bid_str = f"{bid_price:,.{precision}f}({bid_size:.2f})"
+                        ask_str = f"{ask_price:,.{precision}f}({ask_size:.2f})"
+                        price_str = f"{bid_str}/{ask_str}"
                         
                         # 🔥 根据同向判断应用颜色
                         if same_direction:
                             if idx == price_long_idx:
-                                price_str = f"[green]{price_str}[/green]"  # 做多 = 绿色
+                                # 做多 = 绿色
+                                price_str = f"[green]{price_str}[/green]"
                             elif idx == price_short_idx:
-                                price_str = f"[red]{price_str}[/red]"      # 做空 = 红色
+                                # 做空 = 红色
+                                price_str = f"[red]{price_str}[/red]"
                         
                         row.append(price_str)
                     else:
@@ -827,7 +1092,8 @@ class ArbitrageMonitorApp:
                     
                     # 添加资金费率（8小时 + 年化）
                     if self.config['display'].get('show_funding_rates', True):
-                        funding_rate = funding_rate_values[idx] if idx < len(funding_rate_values) else None
+                        funding_rate = funding_rate_values[idx] if idx < len(
+                            funding_rate_values) else None
                         if funding_rate is not None:
                             # 8小时费率
                             fr_8h = float(funding_rate * 100)
@@ -837,19 +1103,36 @@ class ArbitrageMonitorApp:
                         else:
                             row.append("-")
                 
-                # 🔥 第四步：计算价差
-                valid_price_values = [p for p in price_values if p is not None]
-                if len(valid_price_values) >= 2:
-                    max_price = max(valid_price_values)
-                    min_price = min(valid_price_values)
-                    spread_pct = ((max_price - min_price) / min_price) * Decimal("100")
-                    row.append(f"{float(spread_pct):.3f}%")
+                # 🔥 第四步：计算价差（只显示有利可图的价差）
+                # 使用订单簿买1/卖1价格，只计算正向套利机会
+                max_profitable_spread = Decimal("0")
+                
+                if len([ob for ob in orderbook_values if ob is not None]) >= 2:
+                    # 尝试所有交易所两两组合，找到最大正价差
+                    from itertools import combinations as combo
+                    valid_orderbooks = [(i, ob) for i, ob in enumerate(orderbook_values) if ob is not None]
+                    
+                    for (idx1, ob1), (idx2, ob2) in combo(valid_orderbooks, 2):
+                        # 正向套利1：在交易所1买入（ask1），在交易所2卖出（bid2）
+                        if ob2["bid"] > ob1["ask"]:
+                            spread = ((ob2["bid"] - ob1["ask"]) / ob1["ask"]) * Decimal("100")
+                            max_profitable_spread = max(max_profitable_spread, spread)
+                        
+                        # 正向套利2：在交易所2买入（ask2），在交易所1卖出（bid1）
+                        if ob1["bid"] > ob2["ask"]:
+                            spread = ((ob1["bid"] - ob2["ask"]) / ob2["ask"]) * Decimal("100")
+                            max_profitable_spread = max(max_profitable_spread, spread)
+                
+                # 只显示有利可图的价差（>0）
+                if max_profitable_spread > 0:
+                    row.append(f"{float(max_profitable_spread):.3f}%")
                 else:
                     row.append("-")
                 
                 # 🔥 第五步：费率差计算（保留正负号，显示8小时 + 年化）
                 if self.config['display'].get('show_funding_rates', True) and len(self.config['exchanges']) >= 2:
-                    valid_fr_values = [fr for fr in funding_rate_values if fr is not None]
+                    valid_fr_values = [
+                        fr for fr in funding_rate_values if fr is not None]
                     if len(valid_fr_values) >= 2 and len(funding_rate_values) >= 2:
                         fr1 = funding_rate_values[0]  # EdgeX (已转换为8小时)
                         fr2 = funding_rate_values[1]  # Lighter (8小时)
@@ -870,11 +1153,13 @@ class ArbitrageMonitorApp:
                                 has_high_rate_diff = True
                             
                             # 🔥 更新费率差异跟踪
-                            self._update_rate_diff_tracking(symbol, diff_annual)
+                            self._update_rate_diff_tracking(
+                                symbol, diff_annual)
                             
                             # 显示时保留符号
                             sign = "+" if rate_diff >= 0 else ""
-                            row.append(f"{sign}{diff_8h:.4f}%/{sign}{diff_annual:.1f}%")
+                            row.append(
+                                f"{sign}{diff_8h:.4f}%/{sign}{diff_annual:.1f}%")
                             
                             # 🔥 添加持续时间显示
                             duration_str = self._get_rate_diff_duration(symbol)
@@ -905,10 +1190,10 @@ class ArbitrageMonitorApp:
                 Layout(self.create_controls_panel(), size=3)
             )
             
-            # 主内容区分为三个部分：统计 + 套利机会 + 价格表
+            # 主内容区分为两个部分：统计 + 价格表（移除套利机会表格）
             layout["main"].split_column(
-                Layout(Panel.fit(Text.assemble(stats_text, "\n\n"), title="📊 统计"), size=5),
-                Layout(Panel(table, border_style="magenta"), size=10, name="opportunities"),  # 🔥 固定高度10行
+                Layout(Panel.fit(Text.assemble(
+                    stats_text, "\n\n"), title="📊 统计"), size=5),
                 Layout(price_table, name="prices")
             )
             
@@ -922,10 +1207,9 @@ class ArbitrageMonitorApp:
             Layout(self.create_controls_panel(), size=3)
         )
         
-        # 主内容区分为两个部分：统计 + 套利机会
-        layout["main"].split_column(
-            Layout(Panel.fit(Text.assemble(stats_text, "\n\n"), title="📊 统计"), size=5),
-            Layout(table, name="opportunities")
+        # 主内容区只显示统计（移除套利机会表格）
+        layout["main"].update(
+            Panel.fit(Text.assemble(stats_text, "\n\n"), title="📊 统计")
         )
         
         return layout
@@ -950,11 +1234,11 @@ class ArbitrageMonitorApp:
                     # 生成新的显示内容（获取最新数据）
                     layout = self.generate_display()
                     
-                    # 🔥 更新显示（Layout自动管理布局，无闪烁）
+                    # 🚀 更新显示（Layout自动管理布局，无闪烁）
                     live.update(layout)
                     
-                    # 等待配置的刷新间隔（默认2秒）
-                    await asyncio.sleep(self.config['display']['refresh_rate'])
+                    # 🚀 降低刷新频率到0.2秒（5Hz），避免阻塞事件循环
+                    await asyncio.sleep(0.2)
                     
                 except KeyboardInterrupt:
                     break
@@ -1013,4 +1297,3 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"❌ 程序异常: {e}")
         sys.exit(1)
-

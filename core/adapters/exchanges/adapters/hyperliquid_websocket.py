@@ -14,7 +14,7 @@ import ccxt.pro as ccxt
 from ..interface import ExchangeConfig
 from ..models import (
     TickerData, OrderBookData, TradeData, OrderBookLevel,
-    OrderSide
+    OrderSide, OrderStatus, OrderType, OrderData
 )
 from .hyperliquid_base import HyperliquidBase
 
@@ -39,6 +39,7 @@ class HyperliquidWebSocket:
         # ccxt WebSocket 相关
         self._ccxt_exchange = None
         self._ccxt_connected = False
+        self._ws_connected = False
         self._ccxt_tasks = set()  # 修改为set类型，匹配后续使用
 
         # 订阅管理
@@ -54,6 +55,13 @@ class HyperliquidWebSocket:
         self._latest_orderbooks: Dict[str, Dict[str, Any]] = {}
         self._asset_ctx_cache = {}
         self._extended_data_callbacks = []
+        self._order_fill_callbacks: List[Callable[[OrderData], Any]] = []
+        self._position_callbacks: List[Callable[[Dict[str, Any]], Any]] = []
+
+        # 🔥 初始化订单簿缓存（防止订阅时找不到属性）
+        self._orderbook_cache = {}
+        self._asset_context_cache = {}
+        self._last_cache_update = {}
 
         # 统计配置
         self._stats_config = None
@@ -65,6 +73,14 @@ class HyperliquidWebSocket:
 
         # 初始化连接状态监控
         self._init_connection_monitoring()
+
+    @property
+    def connected(self) -> bool:
+        """与 AribtrageExecutor 的兼容字段"""
+        return self._ws_connected
+
+    def is_connected(self) -> bool:
+        return self._ws_connected
 
     def _init_stats_config(self) -> None:
         """初始化统计配置"""
@@ -315,6 +331,7 @@ class HyperliquidWebSocket:
                     return False
 
             self._ccxt_connected = True
+            self._ws_connected = True
 
             if self.logger:
                 self.logger.info("✅ ccxt WebSocket连接已准备就绪")
@@ -558,11 +575,6 @@ class HyperliquidWebSocket:
     async def _ccxt_watch_orders(self, symbol: str = None):
         """使用ccxt监听订单状态"""
         try:
-            print(f"\n{'='*80}", flush=True)
-            print(
-                f"[WS-INIT-DEBUG] 🚀 _ccxt_watch_orders 任务启动！symbol={symbol}", flush=True)
-            print(f"{'='*80}\n", flush=True)
-
             self.logger.info(
                 f"[WS-INIT-DEBUG] 🚀 _ccxt_watch_orders 任务启动！symbol={symbol}")
 
@@ -583,12 +595,8 @@ class HyperliquidWebSocket:
             self.logger.info(f"[CCXT] 开始监听订单状态 {symbol or '全部'}")
 
             if not self._ccxt_connected:
-                print(f"\n[WS-INIT-DEBUG] ❌ CCXT未连接，无法监听订单！\n", flush=True)
                 self.logger.error("[WS-INIT-DEBUG] ❌ CCXT未连接，无法监听订单！")
                 return
-
-            # 如果连接成功，打印状态
-            print(f"[WS-INIT-DEBUG] ✅ CCXT已连接，准备进入监听循环...\n", flush=True)
 
             while not self._should_stop and self._ccxt_connected:
                 try:
@@ -632,6 +640,10 @@ class HyperliquidWebSocket:
                             # 直接传递订单字典列表
                             await self._base.extended_data_callback('order', order_dicts)
                             self.logger.info(f"[WS-ORDER-DEBUG] ✅ 订单回调已触发")
+                            # 转换为 OrderData，推送给订阅者
+                            for converted in self._convert_orders_to_models(order_dicts):
+                                if converted and converted.status == OrderStatus.FILLED:
+                                    await self._emit_order_fill_callbacks(converted)
                         else:
                             self.logger.warning(
                                 f"[WS-ORDER-DEBUG] ⚠️  order_dicts为空，无法触发回调")
@@ -1170,6 +1182,7 @@ class HyperliquidWebSocket:
         """停止监控（更新版本）"""
         try:
             self._should_stop = True
+            self._ws_connected = False
 
             # 清理任务
             await self._cleanup_ccxt_tasks()
@@ -1411,6 +1424,20 @@ class HyperliquidWebSocket:
             self._ccxt_tasks.add(order_task)
             order_task.add_done_callback(self._ccxt_tasks.discard)
 
+    async def subscribe_order_fills(self, callback: Callable[[OrderData], None]) -> None:
+        """订阅订单成交推送（通过watch_orders）"""
+        if callback and callback not in self._order_fill_callbacks:
+            self._order_fill_callbacks.append(callback)
+            self.logger.info("✅ [Hyperliquid] 已注册订单成交回调")
+
+    async def subscribe_positions(self, callback: Callable[[Dict[str, Any]], None]) -> None:
+        """
+        Hyperliquid 暂无原生持仓推送，这里只是保持接口一致并提示回退机制
+        """
+        if callback and callback not in self._position_callbacks:
+            self._position_callbacks.append(callback)
+        self.logger.info("ℹ️  Hyperliquid WebSocket 不提供持仓推送，将依赖REST刷新缓存")
+
     async def unsubscribe_trades(self, symbols: List[str]):
         """取消订阅交易数据"""
         self.logger.info(f"[CCXT] 取消订阅交易数据: {symbols}")
@@ -1422,6 +1449,18 @@ class HyperliquidWebSocket:
         self.logger.info("[CCXT] 取消订阅用户数据")
         # 由于ccxt任务是独立的，我们需要重新启动监听任务
         # 这里可以实现更精细的取消订阅逻辑
+
+    async def _emit_order_fill_callbacks(self, order: OrderData) -> None:
+        """触发订单成交回调"""
+        for callback in self._order_fill_callbacks:
+            try:
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(order)
+                else:
+                    callback(order)
+            except Exception as exc:
+                if self.logger:
+                    self.logger.warning(f"[WS-ORDER-DEBUG] 订单回调执行失败: {exc}")
 
     # 数据查询方法
     async def get_latest_ticker(self, symbol: str) -> Optional[Dict[str, Any]]:
@@ -1470,6 +1509,63 @@ class HyperliquidWebSocket:
         except Exception as e:
             self.logger.error(f"获取最新orderbook失败 {symbol}: {e}")
             return None
+
+    def _convert_orders_to_models(self, order_dicts: List[Dict[str, Any]]) -> List[OrderData]:
+        """将ccxt订单字典转换为 OrderData"""
+        results: List[OrderData] = []
+
+        status_mapping = {
+            'open': OrderStatus.OPEN,
+            'closed': OrderStatus.FILLED,
+            'canceled': OrderStatus.CANCELED,
+            'cancelled': OrderStatus.CANCELED,
+            'rejected': OrderStatus.REJECTED,
+            'expired': OrderStatus.EXPIRED,
+        }
+        type_mapping = {
+            'market': OrderType.MARKET,
+            'limit': OrderType.LIMIT,
+            'stop': OrderType.STOP,
+            'stop_limit': OrderType.STOP_LIMIT,
+            'take_profit': OrderType.TAKE_PROFIT,
+            'take_profit_limit': OrderType.TAKE_PROFIT_LIMIT,
+        }
+
+        for raw in order_dicts:
+            try:
+                symbol = raw.get('symbol') or raw.get('info', {}).get('symbol')
+                if not symbol:
+                    continue
+                status = status_mapping.get(raw.get('status'), OrderStatus.UNKNOWN)
+                order_type = type_mapping.get(raw.get('type'), OrderType.LIMIT)
+                side = OrderSide.BUY if raw.get('side') == 'buy' else OrderSide.SELL
+
+                order = OrderData(
+                    id=str(raw.get('id', '')),
+                    client_id=raw.get('clientOrderId'),
+                    symbol=symbol,
+                    side=side,
+                    type=order_type,
+                    amount=self._base._safe_decimal(raw.get('amount')),
+                    price=self._base._safe_decimal(raw.get('price')),
+                    filled=self._base._safe_decimal(raw.get('filled')),
+                    remaining=self._base._safe_decimal(raw.get('remaining')),
+                    cost=self._base._safe_decimal(raw.get('cost')),
+                    average=self._base._safe_decimal(raw.get('average')),
+                    status=status,
+                    timestamp=self._base._parse_timestamp(raw.get('timestamp')),
+                    updated=self._base._parse_timestamp(raw.get('lastTradeTimestamp')),
+                    fee=raw.get('fee'),
+                    trades=raw.get('trades', []),
+                    params={},
+                    raw_data=raw,
+                )
+                results.append(order)
+            except Exception as exc:
+                if self.logger:
+                    self.logger.debug(f"[WS-ORDER-DEBUG] 无法解析订单: {exc} | 数据: {raw}")
+
+        return results
 
     async def get_latest_trades(self, symbol: str, limit: int = 100) -> List[Dict[str, Any]]:
         """获取最新的交易数据"""

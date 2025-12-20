@@ -1,0 +1,54 @@
+# GRVT adapter config example
+#
+# Notes:
+# - Authentication uses API key login -> gravity cookie + X-Grvt-Account-Id header
+# - Trading requires EIP-712 signing with your private_key (EVM)
+# - You must provide sub_account_id for trading/account endpoints
+#
+# Environment:
+# - prod: mainnet endpoints, chain_id=325
+# - testnet: testnet endpoints, chain_id=326
+# - dev/stg: gravitymarkets endpoints (internal), chain_id differs
+
+exchange_id: grvt
+
+# ExchangeConfig base fields (loaded by your config loader)
+testnet: true
+enable_websocket: true
+default_leverage: 1
+default_margin_mode: cross
+
+# Auth (DO NOT put secrets in YAML)
+# Provide these via environment variables instead:
+# - GRVT_API_KEY
+# - GRVT_PRIVATE_KEY
+# - GRVT_SUB_ACCOUNT_ID (trading sub-account id, uint64 string)
+
+rate_limits:
+  ticker:
+    max_requests: 60
+    time_window: 60
+  orderbook:
+    max_requests: 60
+    time_window: 60
+  trading:
+    max_requests: 20
+    time_window: 60
+
+extra_params:
+  # prod/testnet/dev/stg
+  env: testnet
+  # sub_account_id is required for trading/account endpoints.
+  # DO NOT hardcode it here; pass it through env and let your config loader inject it.
+
+  # Optional: override endpoints (defaults are official)
+  # edge_rpc: https://edge.testnet.grvt.io
+  # trade_rpc: https://trades.testnet.grvt.io
+  # market_rpc: https://market-data.testnet.grvt.io
+  # trade_ws: wss://trades.testnet.grvt.io/ws
+  # market_ws: wss://market-data.testnet.grvt.io/ws
+
+  # Optional: WS publish rate (ms) used in selectors like BTC_USDT_Perp@500
+  ws_rate_ms: 500
+
+

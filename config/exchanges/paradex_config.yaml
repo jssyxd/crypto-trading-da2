@@ -1,0 +1,199 @@
+# Paradex 交易所配置文件
+#
+# Paradex是一个基于Starknet的去中心化永续合约交易所
+# 使用JWT Token认证和私钥签名交易
+
+paradex:
+  # 基础配置
+  name: "Paradex"
+  exchange_type: "perpetual"  # 永续合约交易所
+  
+  # 网络配置
+  testnet: false  # 是否使用测试网（设置为true自动切换到测试网）
+  base_url: "https://api.prod.paradex.trade/v1"  # 主网REST API
+  ws_url: "wss://ws.api.prod.paradex.trade/v1"  # 主网WebSocket API
+  
+  # 测试网配置（testnet: true时自动使用）
+  # base_url: "https://api.testnet.paradex.trade/v1"
+  # ws_url: "wss://ws.api.testnet.paradex.trade/v1"
+  
+  # ============================================================================
+  # 🔐 身份验证配置 (Authentication Configuration)
+  # ============================================================================
+  # 
+  # 📌 配置优先级：环境变量 > YAML配置 > 默认值
+  # 
+  # ⭐ 推荐方式：使用环境变量（更安全）
+  #    1. 创建 .env 文件（参考 docs/ENV_CONFIG_TEMPLATE.md）
+  #    2. 配置环境变量：
+  #         PARADEX_API_KEY="0x..."
+  #         PARADEX_L2_ADDRESS="0x..."
+  #         PARADEX_JWT_TOKEN="eyJ..."
+  #    3. 下面的字段留空即可
+  #    详见文档：docs/ENV_CONFIG_TEMPLATE.md
+  # 
+  # 或直接在 YAML 中配置（仅限测试环境，注意不要提交真实密钥）
+  # 
+  # ============================================================================
+  # 
+  # Paradex 使用两种身份验证模式：
+  # 
+  # 1️⃣ 只读模式（Read-only Mode）- 仅用于监控和数据查询
+  #    - 只需配置 JWT_TOKEN
+  #    - 不能创建/取消订单
+  #    - 适合套利监控等场景
+  # 
+  # 2️⃣ 交易模式（Trading Mode）- 完整交易功能
+  #    - 需要配置 L2 私钥（api_key）和 L2 地址（l2_address）
+  #    - 使用 paradex-py SDK 自动签名
+  #    - 适合网格交易、套利执行等场景
+  # 
+  # 🔑 如何获取密钥：
+  #    - JWT Token: https://app.paradex.trade/settings → API Keys → Create Read-only Token
+  #    - L2 Subkey: https://app.paradex.trade/settings → API Keys → Create Trading Subkey
+  # 
+  # 📚 详细文档：docs/adapters/PARADEX_SDK_INTEGRATION.md
+  # ============================================================================
+  
+  # 🔑 密钥配置
+  
+  # 交易密钥配置（如需交易功能）
+  # 从 Paradex 下载的 JSON 文件中获取
+  # 环境变量: PARADEX_API_KEY
+  api_key: ""              # 填写: private_key（0x开头的66字符）
+  
+  # 保留字段（Paradex 不使用）
+  api_secret: ""           # 留空
+  
+  # 额外参数
+  extra_params:
+    # JWT Token（只读或交易模式都可用）
+    # 环境变量: PARADEX_JWT_TOKEN
+    jwt_token: ""          # 填写: JWT Token 字符串
+    
+    # L2 地址（交易模式必需）
+    # 从 Paradex 下载的 JSON 文件中获取
+    # 环境变量: PARADEX_L2_ADDRESS
+    l2_address: ""         # 填写: address（0x开头的66字符）
+    
+    # L1 / 钱包地址（交易模式推荐）
+    # 环境变量: PARADEX_WALLET_ADDRESS
+    wallet_address: ""      # 留空，使用环境变量 PARADEX_WALLET_ADDRESS
+  
+  # 功能配置
+  enable_websocket: true  # 启用WebSocket（强烈推荐）
+  enable_auto_reconnect: true  # 启用自动重连
+  enable_heartbeat: true  # 启用心跳检测
+  
+  # WebSocket配置
+  websocket:
+    ping_interval: 55  # Ping间隔（秒），Paradex服务器每55秒ping一次
+    pong_timeout: 5  # Pong超时（秒），必须在5秒内回复
+    reconnect_delay: 5  # 重连延迟（秒）
+    max_reconnect_attempts: 10  # 最大重连次数
+  
+  # 超时配置
+  connect_timeout: 30  # 连接超时（秒）
+  request_timeout: 10  # 请求超时（秒）
+  heartbeat_interval: 30  # 心跳间隔（秒）
+  
+  # 重试配置
+  max_retry_attempts: 3  # 最大重试次数
+  retry_delay: 1.0  # 重试延迟（秒）
+  
+  # 频率限制（基于Paradex API文档）
+  rate_limits:
+    ticker:
+      max_requests: 100
+      time_window: 60
+    orderbook:
+      max_requests: 100
+      time_window: 60
+    trading:
+      max_requests: 20  # Paradex订单创建有限制
+      time_window: 60
+  
+  # 交易配置
+  default_leverage: 1  # 默认杠杆倍数（在账户层面配置）
+  default_margin_mode: "cross"  # 默认保证金模式（在账户层面配置）
+  
+  # 符号映射（Paradex特殊格式）
+  # Paradex格式: BTC-USD-PERP, ETH-USD-PERP
+  # 系统标准格式: BTC/USDC:PERP, ETH/USDC:PERP
+  symbol_mapping:
+    "BTC/USDC:PERP": "BTC-USD-PERP"
+    "ETH/USDC:PERP": "ETH-USD-PERP"
+    "SOL/USDC:PERP": "SOL-USD-PERP"
+    "AVAX/USDC:PERP": "AVAX-USD-PERP"
+    "DOGE/USDC:PERP": "DOGE-USD-PERP"
+
+# ============================================================================
+# 📖 快速开始指南
+# ============================================================================
+
+# 步骤1: 安装 paradex-py SDK
+# --------------------------------------------------------
+# pip install paradex-py
+# 或者（如果使用 requirements.txt）：
+# pip install -r requirements.txt
+
+# 步骤2: 获取密钥
+# --------------------------------------------------------
+# 方式A - 只读模式（仅监控，不交易）：
+#   1. 访问 https://app.paradex.trade/settings
+#   2. 点击 "API Keys" → "Create Read-only Token"
+#   3. 复制 JWT Token
+#   4. 设置环境变量：
+#      export PARADEX_JWT_TOKEN="your_jwt_token_here"
+#   5. 无需配置 api_key 和 l2_address
+#
+# 方式B - 交易模式（完整功能，推荐）：
+#   1. 访问 https://app.paradex.trade/settings
+#   2. 点击 "API Keys" → "Create Trading Subkey"
+#   3. 下载 JSON 文件，包含 private_key, public_key, address
+#   4. 设置环境变量：
+#      export PARADEX_L2_PRIVATE_KEY="0x..."  # JSON 中的 private_key
+#      export PARADEX_L2_ADDRESS="0x..."      # JSON 中的 address
+#      export PARADEX_JWT_TOKEN="your_jwt_token_here"  # 可选
+
+# 步骤3: 在套利或网格脚本中使用
+# --------------------------------------------------------
+# config/arbitrage/arbitrage_config.yaml:
+#   exchanges: ["paradex", "hyperliquid", ...]
+#
+# 或 config/grid/grid_config.yaml:
+#   exchange: "paradex"
+
+# ============================================================================
+# ⚠️ 注意事项
+# ============================================================================
+
+# 认证相关：
+# - ✅ JWT Token 有过期时间，需要定期刷新（通常30天）
+# - ✅ 订单签名由 paradex-py SDK 自动处理（基于 Starknet）
+# - ✅ 使用 Subkeys 更安全（不能提现/转账，只能交易）
+# - ❌ 不要将真实 API 密钥提交到代码仓库
+
+# WebSocket 相关：
+# - Paradex 使用 JSON-RPC 2.0 协议
+# - BBO 订单簿更新频率为 50ms 或 100ms
+# - 服务器每 55 秒发送一次 ping，必须在 5 秒内回复 pong
+
+# 订单相关：
+# - 订单创建/取消是异步的
+# - 建议通过 WebSocket 订阅 transaction.trades 确认成交
+# - 订单取消通过 WebSocket 确认状态变化
+
+# 性能相关：
+# - 监控 API 使用量，避免超过频率限制
+# - 交易订单频率限制：20 次/分钟
+# - 市场数据频率限制：100 次/分钟
+
+# ============================================================================
+# 📚 完整文档
+# ============================================================================
+# - SDK 集成指南: docs/adapters/PARADEX_SDK_INTEGRATION.md
+# - 适配器分析: docs/adapters/paradex_adapter_analysis.md
+# - 快速开始: docs/adapters/PARADEX_QUICK_START.md
+# - API 认证文档: docs/adapters/paradex API Authentication.md
+

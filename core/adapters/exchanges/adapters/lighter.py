@@ -3,14 +3,14 @@ Lighter交易所适配器
 
 基于MESA架构的Lighter适配器，提供统一的交易接口。
 使用Lighter SDK进行API交互和WebSocket连接。
-整合了分离的模块：lighter_base.py、lighter_rest.py、lighter_websocket.py
-"""
+整合了分离的模块：lighter_base.py、lighter_rest.py、lighter_websocket.py 
+""" 
 
 import asyncio
 import time
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import yaml
 import os
 
@@ -33,22 +33,36 @@ class LighterAdapter(ExchangeAdapter):
 
         # 初始化各个模块
         config_dict = self._convert_config_to_dict(config)
+        # 保存原始配置，便于局部重建
+        self._config_dict = config_dict
         self._base = LighterBase(config_dict)
         self._rest = LighterRest(config_dict)
         self._websocket = LighterWebSocket(config_dict)
+        # 由 orchestrator 注入
+        self._backoff_controller = None
+        
+        # 🔥 优化：将WebSocket引用传递给REST（用于缓存订单簿）
+        self._rest.ws = self._websocket
 
         # 共享数据缓存
-        shared_position_cache = {}
-        shared_order_cache = {}
-        shared_balance_cache = {}
+        shared_position_cache: Dict[str, Dict[str, Any]] = {}
+        shared_order_cache: Dict[str, OrderData] = {}
+        shared_order_cache_by_symbol: Dict[str, Dict[str, OrderData]] = {}
+        shared_balance_cache: Dict[str, Dict[str, Any]] = {}
 
         self._position_cache = shared_position_cache
         self._order_cache = shared_order_cache
+        self._order_cache_by_symbol = shared_order_cache_by_symbol
         self._balance_cache = shared_balance_cache
+        
+        # 🔥 余额缓存过期日志频率控制（避免UI抖动）
+        self._last_balance_expired_log_time = 0
+        self._balance_expired_log_interval = 60  # 每60秒最多打印一次
 
         # 🔥 将共享缓存传递给 WebSocket 模块（确保缓存一致性）
         self._websocket._position_cache = shared_position_cache
         self._websocket._order_cache = shared_order_cache
+        self._websocket._order_cache_by_symbol = shared_order_cache_by_symbol
         self._websocket._balance_cache = shared_balance_cache
 
         # 设置回调列表
@@ -66,6 +80,8 @@ class LighterAdapter(ExchangeAdapter):
         self.base_url = getattr(
             config, 'base_url', None) or self._base.base_url
         self.ws_url = getattr(config, 'ws_url', None) or self._base.ws_url
+        # 🔒 lighter REST 串行锁（复用执行器同策略，避免nonce冲突）
+        self._rest_lock: asyncio.Lock = asyncio.Lock()
 
         # 符号映射
         self._symbol_mapping = getattr(config, 'symbol_mapping', {})
@@ -91,8 +107,8 @@ class LighterAdapter(ExchangeAdapter):
             )
 
             if self.logger:
-                self.logger.info(
-                    f"✅ Lighter订阅管理器初始化成功，模式: {config_dict.get('subscription_mode', {}).get('mode', 'unknown')}")
+                mode = config_dict.get('subscription_mode', {}).get('mode', 'unknown')
+                self.logger.info(f"[Lighter] 订阅管理器: 初始化成功 (模式: {mode})")
 
         except Exception as e:
             if self.logger:
@@ -116,7 +132,7 @@ class LighterAdapter(ExchangeAdapter):
                 logger=self.logger
             )
 
-        self.logger.info("Lighter适配器初始化完成")
+        self.logger.info("[Lighter] 适配器: 初始化完成")
 
     def _convert_config_to_dict(self, config: ExchangeConfig) -> Dict[str, Any]:
         """
@@ -130,34 +146,102 @@ class LighterAdapter(ExchangeAdapter):
         Returns:
             配置字典
         """
-        # 先尝试从ExchangeConfig获取
-        config_dict = {
-            "testnet": getattr(config, 'testnet', False),
-            "api_key_private_key": getattr(config, 'api_key_private_key', ''),
-            "account_index": getattr(config, 'account_index', 0),
-            "api_key_index": getattr(config, 'api_key_index', 0),
-        }
-
-        # 如果api_key_private_key为空，从配置文件加载
-        if not config_dict.get('api_key_private_key'):
-            try:
-                lighter_config = self._load_lighter_config()
-                api_config = lighter_config.get('api_config', {})
-                auth_config = api_config.get('auth', {})
-
-                config_dict['api_key_private_key'] = auth_config.get(
-                    'api_key_private_key', '')
-                config_dict['account_index'] = auth_config.get(
-                    'account_index', 0)
-                config_dict['api_key_index'] = auth_config.get(
-                    'api_key_index', 0)
-                config_dict['testnet'] = api_config.get('testnet', False)
-
+        # 🔥 优先从配置文件加载完整配置（包括api_config结构）
+        try:
+            lighter_config = self._load_lighter_config()
+            
+            # 🔥 检查配置是否加载成功
+            if not lighter_config or lighter_config == {'exchange_id': 'lighter'}:
+                raise ValueError("配置文件加载失败或为空")
+            
+            api_config = lighter_config.get('api_config', {})
+            
+            # 🔥 检查api_config是否存在
+            if not api_config:
                 if self.logger:
-                    self.logger.info("✅ 从lighter_config.yaml加载API配置")
-            except Exception as e:
-                if self.logger:
-                    self.logger.warning(f"⚠️ 无法从配置文件加载Lighter配置: {e}")
+                    self.logger.warning("⚠️ 配置文件中未找到api_config，使用默认配置")
+                raise ValueError("api_config不存在")
+            
+            # 构建配置字典，保持api_config结构
+            config_dict = {
+                "testnet": api_config.get('testnet', False),
+                "api_config": api_config,  # 🔥 保持完整的api_config结构
+            }
+            
+            # 向后兼容：也提供顶层配置项
+            auth_config = api_config.get('auth', {})
+            if not isinstance(auth_config, dict):
+                auth_config = {}
+                api_config['auth'] = auth_config
+            
+            # 🔥 优先使用环境变量（从 ExchangeConfig 传入的值）
+            # ExchangeConfigLoader 已经处理了环境变量优先级
+            env_private_key = getattr(config, 'api_key_private_key', '') or auth_config.get('api_key_private_key', '')
+            env_account_index = getattr(config, 'account_index', 0) or auth_config.get('account_index', 0)
+            env_api_key_index = getattr(config, 'api_key_index', 0) or auth_config.get('api_key_index', 0)
+            
+            # 更新顶层配置（供旧逻辑使用）
+            config_dict['api_key_private_key'] = env_private_key
+            config_dict['account_index'] = env_account_index
+            config_dict['api_key_index'] = env_api_key_index
+            
+            # ⚙️ 同步更新嵌套的 auth 配置，确保 REST/WebSocket 都能读取到
+            if env_private_key:
+                auth_config['api_key_private_key'] = env_private_key
+            if env_account_index:
+                auth_config['account_index'] = env_account_index
+            if env_api_key_index:
+                auth_config['api_key_index'] = env_api_key_index
+            
+            # 如果有私钥，自动启用认证
+            has_auth = bool(env_private_key)
+            auth_enabled = has_auth or auth_config.get('enabled', False)
+            auth_config['enabled'] = auth_enabled
+            config_dict['auth_enabled'] = auth_enabled
+            
+            # 🔥 调试：记录配置加载状态（同时输出嵌套auth的值）
+            if self.logger:
+                api_key_len = len(env_private_key) if env_private_key else 0
+                self.logger.info(
+                    f"📋 [Lighter配置] auth_enabled={auth_enabled}, account_index={env_account_index}, "
+                    f"api_key_index={env_api_key_index}, api_key_len={api_key_len}"
+                )
+                self.logger.info(
+                    "📋 [Lighter配置验证] auth.enabled=%s, account_index=%s, api_key_index=%s",
+                    auth_config.get('enabled'),
+                    auth_config.get('account_index'),
+                    auth_config.get('api_key_index'),
+                )
+            
+            # 🔥 提取WebSocket URL到顶层（供LighterBase使用）
+            config_dict['ws_mainnet_url'] = api_config.get('ws_mainnet_url', '')
+            config_dict['ws_testnet_url'] = api_config.get('ws_testnet_url', '')
+            if 'api_url' in api_config:
+                config_dict['api_url'] = api_config['api_url']
+            
+            if self.logger:
+                self.logger.info("✅ 从lighter_config.yaml加载API配置")
+        except Exception as e:
+            if self.logger:
+                self.logger.warning(f"⚠️ 无法从配置文件加载Lighter配置: {e}，使用环境变量配置")
+            # 从环境变量构建配置
+            api_key_private_key = getattr(config, 'api_key_private_key', '')
+            account_index = getattr(config, 'account_index', 0)
+            api_key_index = getattr(config, 'api_key_index', 0)
+            
+            # 🔥 如果环境变量中有私钥，自动启用认证
+            auth_enabled = bool(api_key_private_key)
+            
+            config_dict = {
+                "testnet": getattr(config, 'testnet', False),
+                "api_key_private_key": api_key_private_key,
+                "account_index": account_index,
+                "api_key_index": api_key_index,
+                "auth_enabled": auth_enabled,
+            }
+            
+            if self.logger:
+                self.logger.info(f"📋 [Lighter环境变量配置] auth_enabled={auth_enabled}, account_index={account_index}, api_key_index={api_key_index}")
 
         # 添加可选配置
         if hasattr(config, 'api_url'):
@@ -169,21 +253,27 @@ class LighterAdapter(ExchangeAdapter):
 
     def _load_lighter_config(self) -> Dict[str, Any]:
         """加载Lighter配置文件"""
-        config_path = "config/exchanges/lighter_config.yaml"
+        from pathlib import Path
+        config_path = Path("config/exchanges/lighter_config.yaml")
 
         try:
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = yaml.safe_load(f)
                 if self.logger:
-                    self.logger.info(f"✅ 加载Lighter配置文件: {config_path}")
+                    self.logger.info(f"✅ [Lighter] 配置文件已加载: {config_path}")
+                    # 🔥 调试：验证关键配置项
+                    api_config = config.get('api_config', {})
+                    auth_config = api_config.get('auth', {})
+                    if self.logger:
+                        self.logger.info(f"📋 [Lighter配置验证] auth.enabled={auth_config.get('enabled')}, account_index={auth_config.get('account_index')}, api_key_index={auth_config.get('api_key_index')}")
                 return config
         except FileNotFoundError:
             if self.logger:
-                self.logger.warning(f"Lighter配置文件未找到: {config_path}")
+                self.logger.warning(f"⚠️ Lighter配置文件未找到: {config_path}")
             return {'exchange_id': 'lighter'}
         except Exception as e:
             if self.logger:
-                self.logger.error(f"加载Lighter配置文件失败: {e}")
+                self.logger.error(f"❌ 加载Lighter配置文件失败: {e}", exc_info=True)
             return {'exchange_id': 'lighter'}
 
     def _get_symbol_cache_service(self):
@@ -197,7 +287,7 @@ class LighterAdapter(ExchangeAdapter):
             symbol_cache_service = container.get(ISymbolCacheService)
 
             if self.logger:
-                self.logger.info("✅ 获取符号缓存服务成功")
+                self.logger.debug("[Lighter] 符号缓存服务: 已获取")
             return symbol_cache_service
 
         except Exception as e:
@@ -219,14 +309,24 @@ class LighterAdapter(ExchangeAdapter):
                 self.logger.info("已经连接到Lighter")
                 return True
 
-            # 初始化REST客户端
-            await self._rest.initialize()
+            # 初始化REST客户端（即使失败也继续，因为公共数据订阅不需要REST）
+            try:
+                await self._rest.initialize()
+            except Exception as rest_err:
+                # 🔥 如果REST初始化失败，记录警告但继续（公共数据模式可能不需要REST）
+                self.logger.warning(f"⚠️ Lighter REST客户端初始化失败: {rest_err}，继续尝试WebSocket连接...")
+                # 如果是因为账户订阅禁用导致的失败，这是正常的，继续执行
+                if "invalid account index" in str(rest_err) or "account index" in str(rest_err).lower():
+                    self.logger.info("ℹ️  [Lighter] 这是预期的行为（公共数据模式，不需要REST认证）")
 
-            # 建立WebSocket连接
+            # 建立WebSocket连接（公共数据订阅只需要WebSocket）
             await self._websocket.connect()
 
-            # 加载市场信息
-            await self._load_market_info()
+            # 加载市场信息（如果REST可用）
+            try:
+                await self._load_market_info()
+            except Exception as market_err:
+                self.logger.warning(f"⚠️ 加载市场信息失败: {market_err}，WebSocket连接已建立，可以继续使用")
 
             self._connected = True
             self._authenticated = bool(self._rest.signer_client)
@@ -307,13 +407,16 @@ class LighterAdapter(ExchangeAdapter):
         try:
             exchange_info = await self._rest.get_exchange_info()
 
-            if exchange_info and exchange_info.symbols:
-                self._supported_symbols = [s['symbol']
-                                           for s in exchange_info.symbols]
-                self._market_info = {s['symbol']                                     : s for s in exchange_info.symbols}
+            if exchange_info and exchange_info.markets:
+                # 🔥 修复：exchange_info.symbols 返回的是字符串列表，不是字典列表
+                # 应该使用 exchange_info.markets.values() 来获取市场字典列表
+                markets_list = list(exchange_info.markets.values())
+                
+                self._supported_symbols = [s['symbol'] for s in markets_list]
+                self._market_info = {s['symbol']: s for s in markets_list}
 
                 # 更新base模块的市场缓存
-                self._base.update_markets_cache(exchange_info.symbols)
+                self._base.update_markets_cache(markets_list)
 
                 # 同步到REST和WebSocket模块
                 self._rest._markets_cache = self._base._markets_cache
@@ -323,7 +426,7 @@ class LighterAdapter(ExchangeAdapter):
 
                 self.logger.info(f"加载了 {len(self._supported_symbols)} 个交易对")
         except Exception as e:
-            self.logger.error(f"加载市场信息失败: {e}")
+            self.logger.error(f"加载市场信息失败: {e}", exc_info=True)
 
     def is_connected(self) -> bool:
         """
@@ -460,37 +563,128 @@ class LighterAdapter(ExchangeAdapter):
     async def get_balances(self) -> List[BalanceData]:
         """
         获取账户余额（ExchangeInterface标准方法）
+        
+        🎯 策略：完全使用 WebSocket 订阅和缓存
+        - 只从 WebSocket 缓存读取余额数据
+        - 不降级到 REST API（避免请求频繁错误）
+        - 🔥 缓存永不过期：因为余额没有变化时WebSocket不会推送更新
+        - 只有在收到新的WebSocket推送时才更新缓存
+        - 如果缓存存在（即使时间很长），也使用它
 
         Returns:
-            List[BalanceData]: 余额数据列表
+            List[BalanceData]: 余额数据列表（如果缓存可用）
         """
-        return await self._rest.get_account_balance()
+        from datetime import datetime
+        
+        # 🔥 检查WebSocket对象和缓存
+        if not hasattr(self, '_websocket') or not self._websocket:
+            if self.logger:
+                self.logger.debug("ℹ️ [Lighter] WebSocket对象不存在，等待连接...")
+            return []
+        
+        if not hasattr(self._websocket, '_balance_cache'):
+            if self.logger:
+                self.logger.debug("ℹ️ [Lighter] WebSocket余额缓存属性不存在，等待初始化...")
+            return []
+        
+        if not self._websocket._balance_cache:
+            if self.logger:
+                self.logger.debug("ℹ️ [Lighter] WebSocket余额缓存为空，等待WebSocket推送...")
+            return []
+        
+        balance_cache = self._websocket._balance_cache.get('USDC')
+        
+        if not balance_cache:
+            if self.logger:
+                self.logger.debug(f"ℹ️ [Lighter] WebSocket余额缓存中没有USDC数据，缓存键: {list(self._websocket._balance_cache.keys())}")
+            return []
+        
+        # 🔥 Lighter余额缓存永不过期：只要缓存存在就使用
+        # 原因：余额没有变化时WebSocket不会推送更新，所以缓存应该一直有效
+        cache_time = balance_cache.get('timestamp')
+        if cache_time:
+            cache_age = (datetime.now() - cache_time).total_seconds()
+            if self.logger:
+                self.logger.debug(f"✅ [Lighter] 使用WebSocket余额缓存 (缓存年龄: {cache_age:.1f}秒，永不过期)")
+        else:
+            # 即使没有时间戳，也使用缓存（可能是旧版本的数据）
+            if self.logger:
+                self.logger.debug("✅ [Lighter] 使用WebSocket余额缓存 (无时间戳，但缓存存在)")
+        
+        return [BalanceData(
+            currency='USDC',
+            free=balance_cache.get('free', 0),
+            used=balance_cache.get('used', 0),
+            total=balance_cache.get('total', 0),
+            usd_value=balance_cache.get('total', 0),
+            timestamp=cache_time if cache_time else datetime.now(),
+            raw_data={'source': 'ws', **balance_cache.get('raw_data', {})}  # 🔥 标记来源
+        )]
 
     async def get_account_balance(self) -> List[BalanceData]:
         """
         获取账户余额（兼容旧接口）
+        
+        🔥 完全使用 WebSocket 订阅，不调用 REST API
 
         Returns:
-            BalanceData列表
+            BalanceData列表（从WebSocket缓存）
         """
-        return await self._rest.get_account_balance()
+        return await self.get_balances()
 
     async def get_open_orders(self, symbol: Optional[str] = None) -> List[OrderData]:
         """
         获取活跃订单
-
+        
         Args:
             symbol: 交易对符号（可选）
-
+        
         Returns:
             OrderData列表
         """
         normalized_symbol = self._normalize_symbol(symbol) if symbol else None
-        return await self._rest.get_open_orders(normalized_symbol)
+        cached_orders = self._collect_cached_orders(normalized_symbol)
+        ws_cache_ready = bool(getattr(self._websocket, "_order_cache_ready", False))
+        
+        if ws_cache_ready:
+            return cached_orders
+        
+        if cached_orders:
+            # WebSocket已返回部分订单但尚未完成初始化，仍优先返回缓存
+            return cached_orders
+        
+        self.logger.warning(
+            "⚠️ [Lighter] WebSocket订单缓存未就绪，临时使用REST查询活跃订单（仅初始化阶段）"
+        )
+        async with self._rest_lock:
+            return await self._rest.get_open_orders(normalized_symbol)
+    
+    def _collect_cached_orders(self, normalized_symbol: Optional[str]) -> List[OrderData]:
+        """
+        基于WebSocket缓存返回当前挂单列表
+        """
+        order_cache_by_symbol: Dict[str, Dict[str, OrderData]] = getattr(
+            self, "_order_cache_by_symbol", {}
+        )
+        if not order_cache_by_symbol:
+            return []
+        
+        if normalized_symbol:
+            symbol_cache = order_cache_by_symbol.get(normalized_symbol, {})
+            return list(symbol_cache.values())
+        
+        orders: List[OrderData] = []
+        for symbol_cache in order_cache_by_symbol.values():
+            orders.extend(symbol_cache.values())
+        return orders
 
     async def get_positions(self, symbols: Optional[List[str]] = None) -> List[PositionData]:
         """
         获取持仓信息（ExchangeInterface标准方法）
+
+        🎯 优先级策略：
+        1. WebSocket 缓存（实时推送，优先）✅
+        2. REST API 查询（降级备用）⚠️
 
         Args:
             symbols: 交易对符号列表，None表示获取所有
@@ -498,34 +692,56 @@ class LighterAdapter(ExchangeAdapter):
         Returns:
             List[PositionData]: 持仓数据列表
         """
-        # 🔥 重要修复：始终从REST API获取最新持仓数据，不使用缓存
-        # 原因：缓存可能不同步，导致持仓数据不准确（特别是多笔成交累加的情况）
-        # position_monitor依赖准确的持仓数据进行监控和异常检测
-        positions = await self._rest.get_positions(symbols)
-
-        # 🔥 更新缓存，确保缓存与REST API同步
-        # 清空旧缓存
-        if symbols:
-            for symbol in symbols:
-                self._position_cache.pop(symbol, None)
-
-        # 写入新数据
-        if positions:
-            from decimal import Decimal
-            for position in positions:
-                # 统一使用LONG=正数, SHORT=负数的符号约定
-                signed_size = position.size if position.side.value.lower() == 'long' else - \
-                    position.size
-                self._position_cache[position.symbol] = {
-                    'symbol': position.symbol,
-                    'size': signed_size,
-                    'side': position.side.value,
-                    'entry_price': position.entry_price,
-                    'unrealized_pnl': position.unrealized_pnl or Decimal('0'),
-                    'timestamp': position.timestamp,
-                }
-
-        return positions
+        from datetime import datetime
+        from decimal import Decimal
+        
+        # 🔥 策略1: 优先使用 WebSocket 缓存
+        if not hasattr(self._websocket, '_position_cache'):
+            if self.logger:
+                self.logger.debug("ℹ️ [Lighter] WebSocket持仓缓存未初始化，等待账户推送...")
+            return []
+        
+        if not self._websocket._position_cache:
+            if self.logger:
+                self.logger.debug("ℹ️ [Lighter] WebSocket持仓缓存为空，等待最新推送...")
+            return []
+        
+        from ..models import PositionSide, MarginMode
+        cached_positions = []
+        target_symbols = symbols if symbols else self._supported_symbols
+        
+        for symbol in target_symbols:
+            cached = self._websocket._position_cache.get(symbol)
+            if not cached:
+                continue
+            
+            side = PositionSide.LONG if str(cached.get('side', '')).lower() == 'long' else PositionSide.SHORT
+            cached_positions.append(PositionData(
+                symbol=symbol,
+                side=side,
+                size=abs(Decimal(str(cached.get('size', 0)))),
+                entry_price=Decimal(str(cached.get('entry_price', 0))),
+                mark_price=None,
+                current_price=None,
+                unrealized_pnl=Decimal(str(cached.get('unrealized_pnl', 0))),
+                realized_pnl=Decimal('0'),
+                percentage=None,
+                leverage=1,
+                margin_mode=MarginMode.CROSS,
+                margin=Decimal('0'),
+                liquidation_price=None,
+                timestamp=cached.get('timestamp') or datetime.now(),
+                raw_data={'source': 'ws', **cached}
+            ))
+        
+        if cached_positions:
+            if self.logger:
+                self.logger.debug(f"✅ [Lighter] 使用WebSocket持仓缓存: {len(cached_positions)}个持仓")
+        else:
+            if self.logger:
+                self.logger.debug("ℹ️ [Lighter] WebSocket持仓缓存存在但没有匹配的持仓数据")
+        
+        return cached_positions
 
     async def get_order_history(
         self,
@@ -535,19 +751,18 @@ class LighterAdapter(ExchangeAdapter):
     ) -> List[OrderData]:
         """
         获取历史订单（ExchangeInterface标准方法）
-
-        Args:
-            symbol: 交易对符号
-            since: 开始时间（暂不支持）
-            limit: 数据条数限制（暂不支持）
-
-        Returns:
-            List[OrderData]: 历史订单列表
         """
-        # Lighter SDK可能不直接支持历史订单查询
-        # 暂时返回空列表
-        self.logger.warning("Lighter适配器暂不支持历史订单查询")
-        return []
+        normalized_symbol = self._normalize_symbol(symbol) if symbol else None
+        safe_limit = limit or 100
+        
+        async with self._rest_lock:
+            orders = await self._rest.get_order_history(normalized_symbol, safe_limit)
+        
+        if orders:
+            self.logger.debug(f"✅ [Lighter] REST获取历史订单: {len(orders)} 条")
+        else:
+            self.logger.debug("ℹ️ [Lighter] REST历史订单为空（可能无已完成订单或接口返回空）")
+        return orders
 
     # ============= 交易功能 =============
 
@@ -582,11 +797,23 @@ class LighterAdapter(ExchangeAdapter):
         side_str = side.value.lower()  # "buy" 或 "sell"
         order_type_str = order_type.value.lower()  # "limit" 或 "market"
 
+        # 🔥 记录下单日志
+        self.logger.info(
+            f"[Lighter] 创建订单: {normalized_symbol} {side_str} {amount} @ {price or 'market'} ({order_type_str})"
+        )
+
         # 调用内部的place_order方法，传递 batch_mode
-        return await self._rest.place_order(
+        result = await self._rest.place_order(
             normalized_symbol, side_str, order_type_str, amount, price,
             batch_mode=batch_mode, **(params or {})
         )
+        
+        if result:
+            self.logger.info(
+                f"✅ [Lighter] 订单已提交: order_id={result.id}, status={result.status.value}"
+            )
+        
+        return result
 
     async def place_order(
         self,
@@ -642,6 +869,38 @@ class LighterAdapter(ExchangeAdapter):
             normalized_symbol, side, quantity, reduce_only, skip_order_index_query
         )
 
+    async def place_market_orders_ws_batch(
+        self,
+        orders: List[Dict[str, Any]],
+        *,
+        slippage_multiplier: Decimal = Decimal("1.0"),
+        slippage_percent: Optional[Decimal] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        使用WebSocket批量发送市价订单（lighter专用）
+        """
+        normalized_orders: List[Dict[str, Any]] = []
+        for order in orders:
+            payload = dict(order)
+            symbol = payload.get("symbol")
+            if symbol:
+                payload["symbol"] = self._normalize_symbol(symbol)
+            normalized_orders.append(payload)
+
+        multiplier = slippage_multiplier
+        if slippage_percent is not None:
+            base_slippage = getattr(self._rest, "base_slippage", None)
+            if base_slippage and base_slippage > Decimal("0"):
+                try:
+                    multiplier = Decimal(str(slippage_percent)) / base_slippage
+                except (InvalidOperation, ZeroDivisionError):
+                    multiplier = slippage_multiplier
+        
+        return await self._rest.place_market_orders_via_ws_batch(
+            normalized_orders,
+            slippage_multiplier=multiplier
+        )
+
     async def get_order(self, order_id: str, symbol: str) -> OrderData:
         """
         获取订单信息（ExchangeInterface标准方法）
@@ -654,6 +913,9 @@ class LighterAdapter(ExchangeAdapter):
             OrderData对象
         """
         normalized_symbol = self._normalize_symbol(symbol)
+        order = self._websocket.lookup_cached_order(order_id, normalized_symbol)
+        if order:
+            return order
         return await self._rest.get_order(order_id, normalized_symbol)
 
     async def cancel_order(self, order_id: str, symbol: str) -> OrderData:
@@ -670,30 +932,37 @@ class LighterAdapter(ExchangeAdapter):
         normalized_symbol = self._normalize_symbol(symbol)
         success = await self._rest.cancel_order(normalized_symbol, order_id)
 
-        if success:
-            # 尝试获取订单信息
-            try:
-                order = await self.get_order(order_id, symbol)
-                return order
-            except:
-                # 如果获取失败，返回一个基本的OrderData对象
-                return OrderData(
-                    id=order_id,
-                    order_id=order_id,
-                    symbol=normalized_symbol,
-                    side=OrderSide.BUY,  # 占位符
-                    order_type=OrderType.LIMIT,  # 占位符
-                    amount=Decimal("0"),
-                    filled=Decimal("0"),
-                    remaining=Decimal("0"),
-                    status=OrderStatus.CANCELED,
-                    price=None,
-                    average_price=None,
-                    timestamp=datetime.now(),
-                    raw_data={}
-                )
-        else:
+        if not success:
             raise Exception(f"Failed to cancel order {order_id}")
+
+        cached = self._websocket.lookup_cached_order(order_id, normalized_symbol)
+        if cached:
+            cached.status = OrderStatus.CANCELED
+            cached.remaining = Decimal("0")
+            cached.filled = cached.filled or Decimal("0")
+            cached.timestamp = datetime.now()
+            return cached
+
+        return OrderData(
+            id=order_id,
+            client_id=None,
+            symbol=normalized_symbol,
+            side=OrderSide.BUY,
+            type=OrderType.LIMIT,
+            amount=Decimal("0"),
+            price=None,
+            filled=Decimal("0"),
+            remaining=Decimal("0"),
+            cost=Decimal("0"),
+            average=None,
+            status=OrderStatus.CANCELED,
+            timestamp=datetime.now(),
+            updated=None,
+            fee=None,
+            trades=[],
+            params={},
+            raw_data={}
+        )
 
     async def cancel_all_orders(self, symbol: Optional[str] = None) -> List[OrderData]:
         """
@@ -766,8 +1035,9 @@ class LighterAdapter(ExchangeAdapter):
             symbol: 交易对符号
             callback: 数据回调函数
         """
-        normalized_symbol = self._normalize_symbol(symbol)
-        await self._websocket.subscribe_trades(normalized_symbol, callback)
+        self.logger.warning(
+            f"⚠️ Lighter暂不支持独立的trades订阅: symbol={symbol}，请使用订单/订单簿回调"
+        )
 
     async def subscribe_orders(self, callback: Optional[Callable] = None):
         """
@@ -790,6 +1060,74 @@ class LighterAdapter(ExchangeAdapter):
         if callback:
             self._position_callbacks.append(callback)
         await self._websocket.subscribe_positions(callback)
+    
+    async def batch_subscribe_tickers(self, symbols: List[str], callback: Optional[Callable] = None) -> None:
+        """
+        批量订阅多个交易对的ticker数据（参考套利监控的订阅方式）
+        
+        Lighter的批量订阅策略：
+        1. 第一个symbol注册回调，后续传None复用统一回调
+        2. WebSocket内部会批量发送订阅消息
+        
+        Args:
+            symbols: 交易对符号列表
+            callback: 数据回调函数（只对第一个symbol注册）
+        """
+        if not symbols:
+            self.logger.warning("批量订阅ticker: 符号列表为空")
+            return
+        
+        self.logger.info(f"📊 开始批量订阅ticker: {len(symbols)} 个交易对")
+        
+        # 🔥 Lighter批量订阅策略：第一个注册回调，后续传None复用
+        for idx, symbol in enumerate(symbols):
+            try:
+                if idx == 0:
+                    # 第一个symbol：注册回调
+                    await self.subscribe_ticker(symbol, callback)
+                    self.logger.info(f"✅ {symbol} (首次注册统一回调)")
+                else:
+                    # 后续symbol：传None复用统一回调
+                    await self.subscribe_ticker(symbol, None)
+                    self.logger.debug(f"✅ {symbol} (复用统一回调)")
+            except Exception as e:
+                self.logger.error(f"❌ 批量订阅失败: {symbol} | 原因: {e}")
+        
+        self.logger.info(f"✅ 批量订阅完成: {len(symbols)} 个交易对")
+    
+    async def batch_subscribe_orderbooks(self, symbols: List[str], callback: Optional[Callable] = None) -> None:
+        """
+        批量订阅多个交易对的订单簿数据（参考套利监控的订阅方式）
+        
+        Lighter的批量订阅策略：
+        1. 第一个symbol注册回调，后续传None复用统一回调
+        2. WebSocket内部会批量发送订阅消息
+        
+        Args:
+            symbols: 交易对符号列表
+            callback: 数据回调函数（只对第一个symbol注册）
+        """
+        if not symbols:
+            self.logger.warning("批量订阅订单簿: 符号列表为空")
+            return
+        
+        self.logger.info(f"📊 开始批量订阅订单簿: {len(symbols)} 个交易对")
+        
+        # 🔥 Lighter批量订阅策略：第一个注册回调，后续传None复用
+        for idx, symbol in enumerate(symbols):
+            try:
+                if idx == 0:
+                    # 第一个symbol：注册回调
+                    await self.subscribe_orderbook(symbol, callback)
+                    self.logger.info(f"✅ {symbol} (首次注册统一回调)")
+                else:
+                    # 后续symbol：传None复用统一回调
+                    await self.subscribe_orderbook(symbol, None)
+                    self.logger.debug(f"✅ {symbol} (复用统一回调)")
+            except Exception as e:
+                self.logger.error(f"❌ 批量订阅订单簿失败: {symbol} | 原因: {e}")
+        
+        self.logger.info(f"✅ 批量订阅订单簿完成: {len(symbols)} 个交易对")
 
     async def unsubscribe_ticker(self, symbol: str):
         """取消订阅ticker"""
@@ -803,8 +1141,7 @@ class LighterAdapter(ExchangeAdapter):
 
     async def unsubscribe_trades(self, symbol: str):
         """取消订阅成交"""
-        normalized_symbol = self._normalize_symbol(symbol)
-        await self._websocket.unsubscribe_trades(normalized_symbol)
+        self.logger.debug(f"ℹ️ Lighter trades订阅已停用，symbol={symbol} 无需额外操作")
 
     async def unsubscribe(self, symbol: Optional[str] = None) -> None:
         """
@@ -911,6 +1248,55 @@ class LighterAdapter(ExchangeAdapter):
 
         # 使用base模块的标准化方法
         return self._base.normalize_symbol(symbol)
+
+    # ------------------------------------------------------------------ #
+    # 轻量重启：nonce 异常时重建 REST/WS，保留缓存与回调
+    # ------------------------------------------------------------------ #
+    def restart_connections(self) -> None:
+        """
+        局部重启适配器的 REST 和 WebSocket 连接，避免全局重启。
+        - 重新创建 LighterRest / LighterWebSocket
+        - 保留共享缓存和回调（持仓/订单/余额、回调列表）
+        - 继承已有的 backoff_controller 引用
+        """
+        try:
+            log = getattr(self, "logger", None) or get_logger(__name__)
+            log.warning("[Lighter] 正在重建 REST/WS 连接（局部重启适配器）")
+            backoff_ctrl = getattr(self, "_backoff_controller", None)
+
+            # 重新创建
+            new_rest = LighterRest(self._config_dict)
+            new_ws = LighterWebSocket(self._config_dict)
+
+            # 缓存/回调共享
+            new_ws._position_cache = self._position_cache
+            new_ws._order_cache = self._order_cache
+            new_ws._order_cache_by_symbol = self._order_cache_by_symbol
+            new_ws._balance_cache = self._balance_cache
+            new_ws._position_callbacks = self._position_callbacks
+            new_ws._order_callbacks = self._order_callbacks
+
+            # REST-WS 关联
+            new_rest.ws = new_ws
+
+            # 继承 backoff_controller
+            if backoff_ctrl:
+                try:
+                    new_rest._backoff_controller = backoff_ctrl
+                except Exception:
+                    pass
+                try:
+                    new_ws._backoff_controller = backoff_ctrl
+                except Exception:
+                    pass
+
+            # 切换引用
+            self._rest = new_rest
+            self._websocket = new_ws
+
+            log.info("[Lighter] REST/WS 重建完成")
+        except Exception as e:
+            log.error(f"[Lighter] 局部重启适配器失败: {e}", exc_info=True)
 
     async def get_supported_symbols(self) -> List[str]:
         """

@@ -32,8 +32,12 @@ class OrderType(Enum):
     MARKET = "market"                # 市价单
     LIMIT = "limit"                  # 限价单
     STOP = "stop"                    # 止损单
+    STOP_LOSS = "stop_loss"          # 止损市价单（兼容字段）
+    STOP_LOSS_LIMIT = "stop_loss_limit"  # 止损限价单（兼容字段）
+    STOP_MARKET = "stop_market"      # 止损市价单
     STOP_LIMIT = "stop_limit"        # 止损限价单
     TAKE_PROFIT = "take_profit"      # 止盈单
+    TAKE_PROFIT_MARKET = "take_profit_market"  # 止盈市价单
     TAKE_PROFIT_LIMIT = "take_profit_limit"  # 止盈限价单
     IOC = "ioc"                      # 立即成交或撤销
     FOK = "fok"                      # 全部成交或撤销
@@ -101,6 +105,17 @@ class OrderData:
         if self.average is not None and isinstance(self.average, (int, float, str)):
             self.average = Decimal(str(self.average))
 
+    # === 向后兼容属性 ===
+    @property
+    def order_id(self) -> str:
+        """兼容旧字段命名"""
+        return self.id
+
+    @property
+    def client_order_id(self) -> Optional[str]:
+        """兼容旧字段命名"""
+        return self.client_id
+
 
 @dataclass
 class PositionData:
@@ -159,6 +174,11 @@ class PositionData:
             if value is not None and isinstance(value, (int, float, str)):
                 setattr(self, field_name, Decimal(str(value)))
 
+    @property
+    def amount(self) -> Decimal:
+        """兼容旧字段命名"""
+        return self.size
+
 
 @dataclass
 class BalanceData:
@@ -181,6 +201,16 @@ class BalanceData:
             self.total = Decimal(str(self.total))
         if self.usd_value is not None and isinstance(self.usd_value, (int, float, str)):
             self.usd_value = Decimal(str(self.usd_value))
+
+    @property
+    def asset(self) -> str:
+        """兼容旧字段命名"""
+        return self.currency
+
+    @property
+    def locked(self) -> Decimal:
+        """兼容旧字段命名"""
+        return self.used
 
 
 @dataclass
@@ -299,6 +329,35 @@ class TickerData:
                     # 转换失败时保持None
                     setattr(self, field_name, None)
 
+    # === 向后兼容属性 ===
+    @property
+    def last_price(self) -> Optional[Decimal]:
+        return self.last
+
+    @property
+    def volume_24h(self) -> Optional[Decimal]:
+        return self.volume
+
+    @property
+    def quote_volume_24h(self) -> Optional[Decimal]:
+        return self.quote_volume
+
+    @property
+    def high_24h(self) -> Optional[Decimal]:
+        return self.high
+
+    @property
+    def low_24h(self) -> Optional[Decimal]:
+        return self.low
+
+    @property
+    def info(self) -> Dict[str, Any]:
+        return self.raw_data
+
+    @info.setter
+    def info(self, value: Dict[str, Any]) -> None:
+        self.raw_data = value
+
     @property
     def spread(self) -> Optional[Decimal]:
         """计算买卖价差"""
@@ -390,7 +449,7 @@ class OrderBookData:
     bids: List[OrderBookLevel]       # 买单
     asks: List[OrderBookLevel]       # 卖单
     timestamp: datetime              # 时间戳（原始字段，保持兼容性）
-    nonce: Optional[int]             # 序列号
+    nonce: Optional[int] = None      # 序列号
 
     # 新增的详细时间戳链条
     exchange_timestamp: Optional[datetime] = None    # 交易所原始时间戳
@@ -455,6 +514,11 @@ class ExchangeInfo:
     markets: Dict[str, Any]         # 市场信息
     status: str                     # 状态
     timestamp: datetime             # 更新时间
+
+    @property
+    def symbols(self) -> List[str]:
+        """兼容旧字段命名，返回市场列表"""
+        return list(self.markets.keys())
 
 
 # 工具函数

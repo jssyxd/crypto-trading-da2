@@ -7,6 +7,12 @@
 
 from typing import Dict, Optional
 import logging
+from pathlib import Path
+
+try:
+    import yaml
+except Exception:  # pragma: no cover - yaml 为可选依赖
+    yaml = None
 
 
 class SimpleSymbolConverter:
@@ -39,6 +45,11 @@ class SimpleSymbolConverter:
             'perp_suffix': '',  # BTCUSD（无后缀）
             'spot_suffix': '',
         },
+        'paradex': {
+            'separator': '-',
+            'perp_suffix': '-PERP',
+            'spot_suffix': '',
+        },
     }
     
     # 直接映射表（完整的12个监控symbol）
@@ -58,6 +69,7 @@ class SimpleSymbolConverter:
             'NEAR-USDC-PERP': 'NEAR_USDC_PERP',
         },
         'lighter': {
+            # Lighter 使用简化符号格式（只保留基础币种）
             'BTC-USDC-PERP': 'BTC',
             'ETH-USDC-PERP': 'ETH',
             'SOL-USDC-PERP': 'SOL',
@@ -85,10 +97,56 @@ class SimpleSymbolConverter:
             'HYPE-USDC-PERP': 'HYPEUSD',
             'NEAR-USDC-PERP': 'NEARUSD',
         },
+        'paradex': {
+            # 自动转换即可，这里保留空字典占位，便于自定义映射
+        },
     }
+    
+    _custom_mappings_loaded = False
     
     def __init__(self, logger: Optional[logging.Logger] = None):
         self.logger = logger or logging.getLogger(__name__)
+        self._ensure_custom_mappings_loaded()
+
+    @classmethod
+    def _ensure_custom_mappings_loaded(cls):
+        """一次性加载 config/symbol_conversion.yaml 中的自定义映射"""
+        if cls._custom_mappings_loaded:
+            return
+        cls._custom_mappings_loaded = True  # 默认视为已加载，避免重复尝试
+
+        config_path = Path("config/symbol_conversion.yaml")
+        if not config_path.exists():
+            return
+
+        if yaml is None:
+            logging.getLogger(__name__).warning(
+                "⚠️ 未安装 PyYAML，跳过自定义符号映射加载: %s", config_path
+            )
+            return
+
+        try:
+            with config_path.open("r", encoding="utf-8") as f:
+                config_data = yaml.safe_load(f) or {}
+        except Exception as exc:
+            logging.getLogger(__name__).warning(
+                "⚠️ 读取 %s 失败，跳过自定义符号映射: %s", config_path, exc
+            )
+            return
+
+        symbol_mappings = (
+            config_data.get("symbol_mappings", {}).get("standard_to_exchange", {})
+        )
+        if not isinstance(symbol_mappings, dict):
+            return
+
+        for exchange, mappings in symbol_mappings.items():
+            if not isinstance(mappings, dict):
+                continue
+            cls.DIRECT_MAPPING.setdefault(exchange, {})
+            # 直接覆盖/更新，yaml 中的定义优先级最高
+            cls.DIRECT_MAPPING[exchange].update(mappings)
+
     
     def convert_to_exchange(self, standard_symbol: str, exchange: str) -> str:
         """
@@ -141,7 +199,7 @@ class SimpleSymbolConverter:
             return base
         
         # 🔥 特殊处理：EdgeX使用USD作为quote，而不是USDC
-        if exchange == 'edgex':
+        if exchange in ('edgex', 'paradex'):
             if quote == 'USDC':
                 quote = 'USD'
         
@@ -198,6 +256,17 @@ class SimpleSymbolConverter:
         elif exchange == 'backpack':
             # Backpack: BTC_USDC_PERP -> BTC-USDC-PERP
             return exchange_symbol.replace('_', '-')
+        elif exchange == 'paradex':
+            parts = exchange_symbol.split('-')
+            if len(parts) >= 3:
+                base = parts[0]
+                quote = parts[1]
+                market_type = parts[2]
+                if quote == 'USD':
+                    quote = 'USDC'
+                return f"{base}-{quote}-{market_type}"
+            # 当频道返回 ALL 等特殊字符串时，直接回传
+            return exchange_symbol
         
         # 5. 无法推断，返回原始符号
         return exchange_symbol

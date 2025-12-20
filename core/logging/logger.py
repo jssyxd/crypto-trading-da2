@@ -55,6 +55,9 @@ class BaseLogger:
     def _setup_logger(self):
         """设置日志器"""
         self.logger.setLevel(self.config.level)
+        
+        # 🔥 关键修复：阻止日志传播到父logger（避免输出到终端UI）
+        self.logger.propagate = False
 
         # 清除现有处理器
         self.logger.handlers.clear()
@@ -84,34 +87,72 @@ class BaseLogger:
         file_handler.setFormatter(file_formatter)
         self.logger.addHandler(file_handler)
 
-    def debug(self, message: str, **kwargs):
+    def debug(self, message: str, *args, **kwargs):
         """调试日志"""
-        extra_info = f" | {self._format_extra(**kwargs)}" if kwargs else ""
-        self.logger.debug(f"{message}{extra_info}")
+        formatted = self._format_message(message, args)
+        logging_kwargs, extra_fields = self._split_logging_kwargs(kwargs)
+        extra_info = f" | {self._format_extra(**extra_fields)}" if extra_fields else ""
+        self.logger.debug(f"{formatted}{extra_info}", **logging_kwargs)
 
-    def info(self, message: str, **kwargs):
+    def info(self, message: str, *args, **kwargs):
         """信息日志"""
-        extra_info = f" | {self._format_extra(**kwargs)}" if kwargs else ""
-        self.logger.info(f"{message}{extra_info}")
+        formatted = self._format_message(message, args)
+        logging_kwargs, extra_fields = self._split_logging_kwargs(kwargs)
+        extra_info = f" | {self._format_extra(**extra_fields)}" if extra_fields else ""
+        self.logger.info(f"{formatted}{extra_info}", **logging_kwargs)
 
-    def warning(self, message: str, **kwargs):
+    def warning(self, message: str, *args, **kwargs):
         """警告日志"""
-        extra_info = f" | {self._format_extra(**kwargs)}" if kwargs else ""
-        self.logger.warning(f"{message}{extra_info}")
+        formatted = self._format_message(message, args)
+        logging_kwargs, extra_fields = self._split_logging_kwargs(kwargs)
+        extra_info = f" | {self._format_extra(**extra_fields)}" if extra_fields else ""
+        self.logger.warning(f"{formatted}{extra_info}", **logging_kwargs)
 
-    def error(self, message: str, **kwargs):
+    def error(self, message: str, *args, **kwargs):
         """错误日志"""
-        extra_info = f" | {self._format_extra(**kwargs)}" if kwargs else ""
-        self.logger.error(f"{message}{extra_info}")
+        formatted = self._format_message(message, args)
+        logging_kwargs, extra_fields = self._split_logging_kwargs(kwargs)
+        extra_info = f" | {self._format_extra(**extra_fields)}" if extra_fields else ""
+        self.logger.error(f"{formatted}{extra_info}", **logging_kwargs)
 
-    def critical(self, message: str, **kwargs):
+    def critical(self, message: str, *args, **kwargs):
         """严重错误日志"""
-        extra_info = f" | {self._format_extra(**kwargs)}" if kwargs else ""
-        self.logger.critical(f"{message}{extra_info}")
+        formatted = self._format_message(message, args)
+        logging_kwargs, extra_fields = self._split_logging_kwargs(kwargs)
+        extra_info = f" | {self._format_extra(**extra_fields)}" if extra_fields else ""
+        self.logger.critical(f"{formatted}{extra_info}", **logging_kwargs)
 
     def _format_extra(self, **kwargs) -> str:
         """格式化额外信息"""
         return " | ".join([f"{k}={v}" for k, v in kwargs.items()])
+    
+    def _split_logging_kwargs(self, kwargs: Dict[str, Any]) -> (Dict[str, Any], Dict[str, Any]):
+        """
+        将logging专用参数(ex: exc_info)与业务自定义字段分离
+        """
+        logging_keys = {'exc_info', 'stack_info', 'extra'}
+        logging_kwargs = {}
+        extra_fields = {}
+        for key, value in kwargs.items():
+            if key in logging_keys:
+                logging_kwargs[key] = value
+            else:
+                extra_fields[key] = value
+        return logging_kwargs, extra_fields
+    
+    @staticmethod
+    def _format_message(message: str, args: tuple) -> str:
+        """兼容标准logging格式化语法"""
+        if not args:
+            return message
+        try:
+            return message % args
+        except (TypeError, ValueError):
+            try:
+                return message.format(*args)
+            except Exception:
+                arg_str = " ".join(str(arg) for arg in args)
+                return f"{message} {arg_str}"
 
 
 class SystemLogger(BaseLogger):

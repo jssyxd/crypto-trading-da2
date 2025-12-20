@@ -97,22 +97,30 @@ symbol_mappings:
       "LINK-USDC-PERP": "LINK_USDC_PERP"
     
     edgex:
-      "BTC-USDC-PERP": "BTC_USDT_PERP"
-      "ETH-USDC-PERP": "ETH_USDT_PERP"
-      "SOL-USDC-PERP": "SOL_USDT_PERP"
-      "AVAX-USDC-PERP": "AVAX_USDT_PERP"
-      "DOGE-USDC-PERP": "DOGE_USDT_PERP"
-      "ADA-USDC-PERP": "ADA_USDT_PERP"
-      "LINK-USDC-PERP": "LINK_USDT_PERP"
+      "BTC-USDC-PERP": "BTCUSD"
+      "ETH-USDC-PERP": "ETHUSD"
+      "SOL-USDC-PERP": "SOLUSD"
+      "AVAX-USDC-PERP": "AVAXUSD"
+      "DOGE-USDC-PERP": "DOGEUSD"
+      "ADA-USDC-PERP": "ADAUSD"
+      "LINK-USDC-PERP": "LINKUSD"
     
     lighter:
-      "BTC-USDC-PERP": "BTC-USD"
-      "ETH-USDC-PERP": "ETH-USD"
-      "SOL-USDC-PERP": "SOL-USD"
-      "AVAX-USDC-PERP": "AVAX-USD"
-      "DOGE-USDC-PERP": "DOGE-USD"
-      "ADA-USDC-PERP": "ADA-USD"
-      "LINK-USDC-PERP": "LINK-USD"
+      # Lighter 使用简化符号格式（只保留基础币种）
+      "BTC-USDC-PERP": "BTC"
+      "ETH-USDC-PERP": "ETH"
+      "SOL-USDC-PERP": "SOL"
+      "AVAX-USDC-PERP": "AVAX"
+      "DOGE-USDC-PERP": "DOGE"
+      "ADA-USDC-PERP": "ADA"
+      "LINK-USDC-PERP": "LINK"
+      "PAXG-USD-PERP": "PAXG"
+      "XAU-USD-PERP": "XAU"
+      "XUA-USD-PERP": "XUA"
+      # Lighter 现货格式（使用斜杠分隔）
+      "ETH-USDC-SPOT": "ETH/USDC"
+      "BTC-USDC-SPOT": "BTC/USDC"
+      "SOL-USDC-SPOT": "SOL/USDC"
   
   # 交易所格式到标准格式的反向映射
   exchange_to_standard:
@@ -131,7 +139,9 @@ symbol_mappings:
       "NEAR": "NEAR-USDC-PERP"
       "UNI": "UNI-USDC-PERP"
       "EIGEN": "EIGEN-USDC-PERP"
-      # Lighter API 也可能返回带后缀的符号
+      "PAXG": "PAXG-USD-PERP"  # Lighter黄金代币（加密货币）
+      "XAU": "XAU-USD-PERP"    # Lighter黄金RWA
+      # Lighter API 也可能返回带后缀的符号（合约）
       "BTC-USD": "BTC-USDC-PERP"
       "ETH-USD": "ETH-USDC-PERP"
       "SOL-USD": "SOL-USDC-PERP"
@@ -145,6 +155,12 @@ symbol_mappings:
       "NEAR-USD": "NEAR-USDC-PERP"
       "UNI-USD": "UNI-USDC-PERP"
       "EIGEN-USD": "EIGEN-USDC-PERP"
+      "PAXG-USD": "PAXG-USD-PERP"  # Lighter黄金代币（加密货币）
+      "XAU-USD": "XAU-USD-PERP"    # Lighter黄金RWA
+      # Lighter 现货符号（反向映射）
+      "ETH/USDC": "ETH-USDC-SPOT"
+      "BTC/USDC": "BTC-USDC-SPOT"
+      "SOL/USDC": "SOL-USDC-SPOT"
     
     edgex:
       # EdgeX API 返回的符号（无_PERP后缀）

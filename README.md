@@ -4,7 +4,44 @@
 
 ## 🎯 项目简介
 
-这是一个企业级的多交易所加密货币自动化交易系统，提供高性能、高可靠性的网格交易、刷量交易、套利监控和市场监控功能。系统采用严格的分层架构设计，支持 Hyperliquid、Backpack、Lighter、Binance、OKX、EdgeX 等多个交易所的完整适配。
+这是一个企业级的多交易所加密货币自动化交易系统，**以高级套利系统为核心**，提供高性能、高可靠性的分段套利、网格交易、刷量交易和市场监控功能。系统采用严格的分层架构设计，支持 Hyperliquid、Backpack、Lighter、Paradex、Binance、OKX、EdgeX、GRVT、Variational 等多个主流交易所的完整适配。
+
+### 🔥 核心亮点：高级套利系统
+
+本系统的**套利引擎**是其最核心、最先进的功能模块，具备以下独特优势：
+
+#### 🚀 双模式架构
+- **网格套利模式（分段系统）**：采用分段网格策略，价差扩大时逐步开仓、收敛时逐步平仓，降低市场冲击和滑点损耗。支持剥头皮变体（触发格子后锁定持仓等待止盈）和拆单变体（单格子多笔累积）
+- **基于历史数据的决策模式**：通过历史价差记录器持续记录各交易所对的价差和资金费率数据，由历史数据计算器计算"天然价差"（历史中位数）和"天然资金费率差"，决策引擎基于历史平均值和用户设定的阈值参数，自动判断两个方向的套利机会：**价差套利**（当前价差超过历史基准+用户阈值时触发）和**资金费率套利**（资金费率差持续满足条件时触发）
+
+#### 💡 统一决策引擎
+- **总量驱动算法**：`target - actual = delta`，精准控制持仓
+- **多交易对独立配置**：每个交易对独立风控、独立决策
+- **多腿套利支持**：支持复杂的多腿对冲策略
+- **多交易所套利**：跨交易所价差捕捉，最大化收益
+
+#### ⚡ Lighter 深度优化
+- **WebSocket 批量下单**：`place_market_orders_ws_batch`，极速执行
+- **智能补单策略**：单腿成交检测 + 3次重试（REST市价 → REST市价 → 激进限价IOC）
+- **订单推送去重**：基于 deque+set 同步缓存，精准状态追踪
+- **动态滑点保护**：支持 1x~100x 动态滑点，适应极端行情
+
+#### 🛡️ 多层风控体系
+- **价格稳定性检测**：过滤虚假突破，避免追涨杀跌
+- **对手盘流动性校验**：确保订单能够完全成交
+- **Reduce-Only 智能管理**：自动探测恢复，避免平仓失败
+- **错误避让控制器**：交易所异常时自动暂停/恢复
+
+### 核心特性
+
+- **🏆 高级套利系统**：分段套利、多腿套利、跨交易所套利，统一决策引擎，智能补单机制
+- **📊 网格交易系统**：普通/马丁/移动网格，剥头皮、本金保护、止盈止损
+- **💹 刷量交易系统**：挂单模式（Backpack）、市价模式（Lighter）
+- **🔔 价格提醒系统**：多交易所价格突破监控，声音提醒
+- **🔗 多交易所适配**：9大交易所完整适配（Hyperliquid、Backpack、Lighter、Paradex、Binance、OKX、EdgeX、GRVT、Variational）
+- **🛡️ 智能风控**：多层风控体系，流动性校验，错误避让，reduce-only 管理
+- **🎨 实时监控 UI**：Rich 库实现的现代化终端界面
+- **🏗️ 企业级架构**：分层设计、依赖注入、接口分离、高可扩展性
 
 ## 🏗️ 核心系统架构
 
@@ -30,10 +67,12 @@
 ├── 💹 刷量交易系统 (Volume Maker)
 │   ├── 挂单模式              # 限价单刷量（Backpack）
 │   └── 市价模式              # 市价单快速刷量（Lighter）
-├── 🔄 套利监控系统 (Arbitrage Monitor)
+├── 🔄 套利监控与执行系统 (Arbitrage Monitor & Execution)
+│   ├── 基础模式套利          # 历史数据决策 + 自动执行
+│   ├── 分段套利系统          # 高级分段执行策略（网格模式）
 │   ├── 价格监控              # 实时价格差监控
 │   ├── 资金费率监控          # 跨交易所费率差异
-│   ├── 套利机会识别          # 价差和费率套利
+│   ├── 套利机会识别与执行    # 价差和费率套利自动执行
 │   ├── 终端 UI              # Rich 实时监控界面
 │   └── 交易对自动发现        # 多交易所交易对匹配
 ├── 🔔 价格提醒系统 (Price Alert)
@@ -44,10 +83,13 @@
 ├── 🔗 交易所适配层 (Exchange Adapters)
 │   ├── Hyperliquid 适配器    # 永续合约 + 现货
 │   ├── Backpack 适配器       # 永续合约
-│   ├── Lighter 适配器        # 永续合约（低手续费）
+│   ├── Lighter 适配器        # 永续合约 + 现货（WS批量下单、智能补单）
 │   ├── Binance 适配器        # 现货 + 永续合约
 │   ├── OKX 适配器            # 现货 + 永续合约
 │   ├── EdgeX 适配器          # 永续合约
+│   ├── Paradex 适配器        # 永续合约（Starknet）
+│   ├── GRVT 适配器           # 永续合约（去中心化）
+│   ├── Variational 适配器    # 永续合约（仅BBO行情）
 │   └── 统一接口标准          # 标准化 API 接口
 └── 🏛️ 基础设施层 (Infrastructure)
     ├── 依赖注入容器          # DI 容器管理
@@ -61,16 +103,28 @@
 
 ### 系统要求
 
-- Python 3.8+
+- Python 3.8+（推荐 Python 3.12）
 - 支持的操作系统：Linux、macOS、Windows
 - 可选：tmux（用于多进程管理）
 
 ### 安装依赖
 
 ```bash
-# 安装 Python 依赖
+# 方式1：主环境依赖（套利、永续合约网格、刷量）
 pip install -r requirements.txt
+
+# 方式2：Python 3.12 环境依赖
+pip install -r requirements-py312.txt
+
+# 方式3：Lighter 现货专用环境（自动安装）
+./setup_lighter_spot_env.sh
 ```
+
+**依赖说明：**
+- `requirements.txt` - 标准依赖包
+- `requirements-py312.txt` - Python 3.12 兼容依赖
+- `requirements-lighter-spot.txt` - Lighter 现货专用依赖（新版 SDK）
+- 详细依赖冲突说明：[docs/dependency_conflicts.md](docs/dependency_conflicts.md)
 
 ### 配置 API 密钥
 
@@ -83,29 +137,83 @@ config/exchanges/
 ├── lighter_config.yaml        # Lighter 配置
 ├── binance_config.yaml        # Binance 配置
 ├── okx_config.yaml            # OKX 配置
-└── edgex_config.yaml          # EdgeX 配置
+├── edgex_config.yaml          # EdgeX 配置
+├── paradex_config.yaml        # Paradex 配置
+└── grvt_config.yaml           # GRVT 配置
 ```
 
 ### 快速启动各系统
 
-#### 网格交易系统
+#### 网格交易系统（永续合约）
 ```bash
+# 激活主环境
+source .venv-py312/bin/activate
+
+# 启动网格交易
 python3 run_grid_trading.py config/grid/lighter-long-perp-btc.yaml
 ```
 
-#### 刷量交易系统（Backpack挂单模式）
+#### 网格交易系统（Lighter 现货）
+```bash
+# 激活 Lighter 现货专用环境
+source .venv-lighter-spot/bin/activate
+# 或使用快捷脚本
+source activate_lighter_spot.sh
+
+# 启动现货网格交易
+python3 run_grid_trading.py config/grid/lighter-long-spot-eth.yaml
+```
+
+#### 刷量交易系统（Backpack 挂单模式）
 ```bash
 python3 run_volume_maker.py config/volume_maker/backpack_btc_volume_maker.yaml
 ```
 
-#### 刷量交易系统（Lighter市价模式）
+#### 刷量交易系统（Lighter 市价模式）
 ```bash
 python3 run_lighter_volume_maker.py config/volume_maker/lighter_volume_maker.yaml
 ```
 
-#### 套利监控系统
+#### 套利监控与执行系统
 ```bash
+# 基础模式套利（历史数据决策 + 自动执行）
 python3 run_arbitrage_monitor.py
+
+# 套利系统 V2（增强监控 + 执行）
+python3 run_arbitrage_monitor_v2.py
+
+# 分段套利系统（网格模式，推荐）
+python3 main_unified.py \
+  --config config/arbitrage/arbitrage_segmented.yaml \
+  --monitor-config config/arbitrage/monitor_v2.yaml
+
+# 单独监控模式（仅监控，不执行）
+python3 main_unified.py \
+  --monitor-config config/arbitrage/monitor_lighter_gold.yaml
+
+# ========== 快速参考命令 ==========
+
+# 环境激活
+source .venv-py312/bin/activate           # Python 3.12 环境
+source .venv-lighter-spot/bin/activate     # Lighter 现货专用环境
+
+# 套利系统启动示例
+# Lighter 黄金监控配置
+python main_unified.py \
+  --monitor-config config/arbitrage/monitor_lighter_gold.yaml
+
+# Lighter 多交易对 BTC 监控
+python main_unified.py \
+  --config config/arbitrage/arbitrage_segmented.yaml \
+  --monitor-config config/arbitrage/monitor_lighter_multi_btc.yaml
+
+# ETH 现货套利
+python main_unified.py \
+  --config config/arbitrage/arbitrage_segmented.yaml \
+  --monitor-config config/arbitrage/monitor_lighter_eth_spot.yaml
+
+# 测试工具
+python test/ws_rest_fill_probe.py --exchange backpack --mode limit
 ```
 
 #### 价格提醒系统
@@ -128,15 +236,17 @@ python3 grid_volatility_scanner/run_scanner.py
 - **智能策略**：剥头皮、智能剥头皮、本金保护、止盈模式
 - **健康检查**：自动订单校验和修复机制
 - **终端 UI**：实时监控界面，显示持仓、盈亏、网格状态
-- **现货支持**：现货预留管理（自动维持币种余额）
-- **多交易所**：支持 Hyperliquid、Backpack、Lighter
+- **现货支持**：现货预留管理（自动维持币种余额）、市场类型自动适配
+- **多交易所**：支持 Hyperliquid、Backpack、Lighter（含现货和永续）
 
 #### 配置文件位置
 
 ```
 config/grid/
-├── lighter_btc_perp_long.yaml              # Lighter BTC 做多
-├── lighter_btc_perp_short.yaml             # Lighter BTC 做空
+├── lighter-long-perp-btc.yaml              # Lighter BTC 永续做多
+├── lighter-long-perp-eth.yaml              # Lighter ETH 永续做多
+├── lighter-long-spot-eth.yaml              # Lighter ETH 现货做多（需新版环境）
+├── lighter-long-spot-模版.yaml              # Lighter 现货模板
 ├── hyperliquid_btc_perp_long.yaml          # Hyperliquid BTC 做多
 ├── hyperliquid_btc_perp_short.yaml         # Hyperliquid BTC 做空
 ├── hyperliquid_btc_spot_long.yaml          # Hyperliquid 现货做多
@@ -150,14 +260,19 @@ config/grid/
 #### 启动方式
 
 ```bash
-# 方式1：直接启动（推荐）
-python3 run_grid_trading.py config/grid/lighter_btc_perp_long.yaml
-python3 run_grid_trading.py config/grid/lighter_eth_perp_long.yaml
+# 方式1：永续合约网格（主环境）
+source .venv-py312/bin/activate
+python3 run_grid_trading.py config/grid/lighter-long-perp-btc.yaml
+python3 run_grid_trading.py config/grid/lighter-long-perp-eth.yaml
 
-# 方式2：DEBUG 模式启动（查看详细日志）
-python3 run_grid_trading.py config/grid/lighter_btc_perp_long.yaml --debug
+# 方式2：现货网格（Lighter 专用环境）
+source activate_lighter_spot.sh
+python3 run_grid_trading.py config/grid/lighter-long-spot-eth.yaml
 
-# 方式3：使用 Shell 脚本批量启动（tmux）
+# 方式3：DEBUG 模式启动（查看详细日志）
+python3 run_grid_trading.py config/grid/lighter-long-perp-btc.yaml --debug
+
+# 方式4：使用 Shell 脚本批量启动（tmux）
 ./scripts/start_all_grids.sh
 ```
 
@@ -219,13 +334,28 @@ python3 run_lighter_volume_maker.py config/volume_maker/lighter_volume_maker.yam
 | `core/services/volume_maker/terminal_ui.py` | 刷量系统终端 UI |
 | `core/services/volume_maker/hourly_statistics.py` | 小时统计模块 |
 
-### 3️⃣ 套利监控系统
+### 3️⃣ 套利监控与执行系统
 
 #### 功能特性
 
-- **价格监控**：实时监控多交易所价格差（EdgeX、Lighter）
+- **双模式支持**：基础模式和分段模式
+- **基础模式**：基于历史数据的决策引擎 + 自动套利执行
+- **分段模式**：高级分段网格执行策略，降低滑点和市场冲击
+  - 支持 SEG-GRID（分段网格）、SEG-SCALP（分段剥头皮）、SEG-GRID+（分段拆单）三种模式
+  - 统一决策引擎：总量驱动算法（target - actual = delta）
+  - 支持多交易对独立配置、多腿套利、多交易所套利
+- **价格监控**：实时监控多交易所价格差（EdgeX、Lighter、Paradex、GRVT）
 - **资金费率监控**：跨交易所资金费率差异追踪
 - **套利机会识别**：价差套利和费率套利机会
+- **Lighter 批量执行优化**：
+  - WebSocket 批量市价单下单（`place_market_orders_ws_batch`）
+  - 单腿成交检测与智能补单策略（3次重试：REST市价 → REST市价 → 激进限价IOC）
+  - 订单推送去重机制（基于 deque+set 同步缓存）
+  - 动态滑点保护价格计算（支持多倍滑点，最高100倍）
+- **风控系统**：
+  - 价格稳定性检测、对手盘流动性校验
+  - reduce-only 状态管理与探测恢复
+  - 错误避让控制器（自动暂停/恢复异常交易所）
 - **终端 UI**：Rich 库实现的现代化实时监控界面
 - **交易对自动发现**：自动匹配多交易所支持的交易对
 - **费率差持续时间追踪**：记录高费率差持续时长
@@ -236,16 +366,33 @@ python3 run_lighter_volume_maker.py config/volume_maker/lighter_volume_maker.yam
 
 ```
 config/arbitrage/
-└── monitor.yaml               # 套利监控配置
+├── monitor.yaml                          # 基础监控配置
+├── monitor_v2.yaml                       # V2 监控配置
+├── monitor_lighter_gold.yaml             # Lighter 黄金监控
+├── monitor_lighter_multi_btc.yaml        # Lighter 多交易对监控
+├── arbitrage_segmented.yaml              # 分段套利配置
+└── （其他监控配置）
 ```
 
 #### 启动方式
 
 ```bash
-# 直接启动
+# 方式1：基础套利监控
 python3 run_arbitrage_monitor.py
 
-# 使用快速启动脚本
+# 方式2：套利监控 V2
+python3 run_arbitrage_monitor_v2.py
+
+# 方式3：统一套利系统（分段模式）
+python3 main_unified.py \
+  --config config/arbitrage/arbitrage_segmented.yaml \
+  --monitor-config config/arbitrage/monitor_v2.yaml
+
+# 方式4：单独监控配置
+python3 main_unified.py \
+  --monitor-config config/arbitrage/monitor_lighter_gold.yaml
+
+# 方式5：使用快速启动脚本
 ./scripts/start_arbitrage_monitor.sh
 ```
 
@@ -253,9 +400,18 @@ python3 run_arbitrage_monitor.py
 
 | 文件路径 | 说明 |
 |---------|------|
-| `run_arbitrage_monitor.py` | 套利监控系统启动脚本 |
-| `core/services/arbitrage_monitor/implementations/arbitrage_monitor_impl.py` | 监控服务实现 |
-| `core/services/arbitrage_monitor/interfaces/arbitrage_monitor_service.py` | 监控服务接口 |
+| `run_arbitrage_monitor.py` | 基础套利系统启动脚本（监控+执行） |
+| `run_arbitrage_monitor_v2.py` | 套利系统 V2 启动脚本（增强版） |
+| `main_unified.py` | 统一分段套利系统启动脚本（网格模式） |
+| `core/services/arbitrage_monitor_v2/core/unified_orchestrator.py` | 统一调度器（监控+决策+执行） |
+| `core/services/arbitrage_monitor_v2/execution/arbitrage_executor.py` | 套利执行器（订单执行核心） |
+| `core/services/arbitrage_monitor_v2/execution/lighter_batch_executor.py` | Lighter 批量执行模块（WS批量+补单） |
+| `core/services/arbitrage_monitor_v2/decision/unified_decision_engine.py` | 统一决策引擎（总量驱动算法） |
+| `core/services/arbitrage_monitor_v2/decision/arbitrage_decision.py` | 基础模式决策引擎（历史数据分析） |
+| `core/services/arbitrage_monitor_v2/history/history_calculator.py` | 历史数据计算器（天然价差/资金费率差） |
+| `core/services/arbitrage_monitor_v2/utils/risk_control_utils.py` | 风控工具（流动性校验、价格稳定性） |
+| `core/services/arbitrage_monitor/implementations/arbitrage_monitor_impl.py` | 基础模式监控与执行服务实现 |
+| `core/services/arbitrage_monitor/interfaces/arbitrage_monitor_service.py` | 套利服务接口 |
 | `core/services/arbitrage_monitor/models/arbitrage_models.py` | 套利数据模型 |
 | `core/services/arbitrage_monitor/utils/symbol_converter.py` | 交易对转换器 |
 
@@ -368,10 +524,17 @@ APR = (格子间距% - 手续费%) × 格子间距% / 网格宽度% × 每小时
 |--------|------|---------|----------|-----------|------|
 | **Hyperliquid** | ✅ | ✅ | ✅ | ✅ | ✅ 完整适配 |
 | **Backpack** | ❌ | ✅ | ✅ | ✅ | ✅ 完整适配 |
-| **Lighter** | ❌ | ✅ | ✅ | ✅ | ✅ 完整适配 |
+| **Lighter** | ✅ | ✅ | ✅ | ✅ | ✅ 完整适配（现货需新版 SDK） |
 | **Binance** | ✅ | ✅ | ✅ | ✅ | ✅ 完整适配 |
 | **OKX** | ✅ | ✅ | ✅ | ✅ | ✅ 完整适配 |
 | **EdgeX** | ❌ | ✅ | ✅ | ✅ | ✅ 完整适配 |
+| **Paradex** | ❌ | ✅ | ✅ | ✅ | ✅ 完整适配（Starknet） |
+| **GRVT** | ❌ | ✅ | ✅ | ✅ | ✅ 完整适配（去中心化） |
+| **Variational** | ❌ | ⚠️ | ✅ | ❌ | 🟡 仅BBO行情 |
+
+**注意：** 
+- Lighter 现货交易需要使用独立的虚拟环境和新版 SDK，详见 [Lighter 现货设置指南](LIGHTER_SPOT_SETUP.md)
+- Variational 当前仅支持 BBO（最佳买卖价）行情获取，不支持完整交易功能
 
 ### 交易所适配器文件
 
@@ -387,11 +550,14 @@ core/adapters/exchanges/adapters/
 ├── backpack_websocket.py    # WebSocket
 ├── lighter.py               # Lighter 统一接口
 ├── lighter_base.py          # 基础类
-├── lighter_rest.py          # REST API
-├── lighter_websocket.py     # WebSocket
+├── lighter_rest.py          # REST API（支持WS批量下单、滑点保护）
+├── lighter_websocket.py     # WebSocket（支持订单推送去重、统一日志）
 ├── binance.py               # Binance 统一接口
 ├── okx.py                   # OKX 统一接口
-└── edgex.py                 # EdgeX 统一接口
+├── edgex.py                 # EdgeX 统一接口
+├── paradex.py               # Paradex 统一接口（Starknet）
+├── grvt.py                  # GRVT 统一接口（去中心化）
+└── variational.py           # Variational 接口（仅BBO行情）
 ```
 
 ## 📁 完整项目结构
@@ -402,7 +568,11 @@ crypto-trading/
 │   ├── run_grid_trading.py                # 网格交易系统启动
 │   ├── run_volume_maker.py                # 挂单刷量系统启动（Backpack）
 │   ├── run_lighter_volume_maker.py        # 市价刷量系统启动（Lighter）
-│   ├── run_arbitrage_monitor.py           # 套利监控系统启动
+│   ├── run_arbitrage_monitor.py           # 基础套利系统启动（监控+执行）
+│   ├── run_arbitrage_monitor_v2.py        # 套利系统 V2 启动（增强版）
+│   ├── run_arbitrage_monitor_simple.py    # 简化套利系统启动
+│   ├── run_arbitrage_execution_v3.py      # 套利执行系统 V3 启动（已废弃）
+│   ├── main_unified.py                    # 统一分段套利系统启动（网格模式）
 │   ├── run_price_alert.py                 # 价格提醒系统启动
 │   └── grid_volatility_scanner/
 │       └── run_scanner.py                 # 网格波动率扫描器启动
@@ -421,10 +591,13 @@ crypto-trading/
 │   │       ├── adapters/                  # 各交易所适配器实现
 │   │       │   ├── hyperliquid*.py        # Hyperliquid 适配器
 │   │       │   ├── backpack*.py           # Backpack 适配器
-│   │       │   ├── lighter*.py            # Lighter 适配器
+│   │       │   ├── lighter*.py            # Lighter 适配器（WS批量、补单）
 │   │       │   ├── binance*.py            # Binance 适配器
 │   │       │   ├── okx*.py                # OKX 适配器
-│   │       │   └── edgex*.py              # EdgeX 适配器
+│   │       │   ├── edgex*.py              # EdgeX 适配器
+│   │       │   ├── paradex*.py            # Paradex 适配器（Starknet）
+│   │       │   ├── grvt*.py               # GRVT 适配器（去中心化）
+│   │       │   └── variational*.py        # Variational 适配器（仅BBO）
 │   │       └── utils/                     # 工具类
 │   │           ├── log_formatter.py       # 日志格式化
 │   │           └── setup_logging.py       # 日志设置
@@ -478,15 +651,73 @@ crypto-trading/
 │   │   │   │   └── volume_maker_statistics.py
 │   │   │   ├── hourly_statistics.py       # 小时统计
 │   │   │   └── terminal_ui.py             # 刷量系统终端 UI
-│   │   ├── arbitrage_monitor/ - 套利监控服务
+│   │   ├── arbitrage_monitor/ - 套利监控与执行服务（基础版）
 │   │   │   ├── implementations/
-│   │   │   │   └── arbitrage_monitor_impl.py   # 监控服务实现
+│   │   │   │   └── arbitrage_monitor_impl.py   # 监控与执行服务实现
 │   │   │   ├── interfaces/
-│   │   │   │   └── arbitrage_monitor_service.py  # 监控服务接口
+│   │   │   │   └── arbitrage_monitor_service.py  # 套利服务接口
 │   │   │   ├── models/
 │   │   │   │   └── arbitrage_models.py    # 套利数据模型
 │   │   │   └── utils/
 │   │   │       └── symbol_converter.py    # 交易对转换器
+│   │   ├── arbitrage_monitor_v2/ - 套利监控与执行服务 V2（分段版）
+│   │   │   ├── models.py                  # V2 数据模型
+│   │   │   ├── analysis/                  # 分析模块
+│   │   │   │   ├── exchange_locker.py     # 交易所锁定
+│   │   │   │   ├── opportunity_finder.py  # 机会发现
+│   │   │   │   └── spread_calculator.py   # 价差计算
+│   │   │   ├── config/                    # 配置模块
+│   │   │   │   ├── arbitrage_config.py    # 套利配置
+│   │   │   │   ├── monitor_config.py      # 监控配置
+│   │   │   │   ├── unified_config_manager.py  # 统一配置管理
+│   │   │   │   ├── symbol_config.py       # 交易对配置
+│   │   │   │   ├── debug_config.py        # 调试配置
+│   │   │   │   ├── multi_exchange_config.py   # 多交易所配置
+│   │   │   │   └── multi_leg_pairs_config.py  # 多腿配置
+│   │   │   ├── core/                      # 核心模块
+│   │   │   │   ├── unified_orchestrator.py       # 统一编排器（监控+决策+执行）
+│   │   │   │   ├── arbitrage_orchestrator_v3.py  # V3 编排器（多交易对支持）
+│   │   │   │   ├── orchestrator.py               # 基础编排器
+│   │   │   │   ├── orchestrator_simple.py        # 简单编排器（轻量级）
+│   │   │   │   ├── orchestrator_bootstrap.py     # 启动引导器
+│   │   │   │   ├── orchestrator_ui_controller.py # UI 控制器
+│   │   │   │   ├── spread_pipeline.py            # 价差数据流水线
+│   │   │   │   ├── reduce_only_probe_service.py  # Reduce-Only 探测服务
+│   │   │   │   ├── health_monitor.py             # 系统健康监控
+│   │   │   │   └── debug_state_printer.py        # 调试状态打印
+│   │   │   ├── data/                      # 数据模块
+│   │   │   │   ├── data_processor.py      # 数据处理器
+│   │   │   │   └── data_receiver.py       # 数据接收器
+│   │   │   ├── decision/                  # 决策模块
+│   │   │   │   ├── arbitrage_decision.py  # 基础模式决策引擎（历史数据分析）
+│   │   │   │   └── unified_decision_engine.py  # 统一决策引擎（总量驱动算法）
+│   │   │   ├── display/                   # 显示模块
+│   │   │   │   ├── ui_manager.py          # UI 管理器
+│   │   │   │   ├── realtime_scroller.py   # 实时滚动器
+│   │   │   │   ├── simple_printer.py      # 简单打印器
+│   │   │   │   └── ui_components.py       # UI 组件
+│   │   │   ├── execution/                 # 执行模块
+│   │   │   │   ├── arbitrage_executor.py  # 套利执行器（核心）
+│   │   │   │   ├── lighter_batch_executor.py   # Lighter批量执行（WS批量+补单）
+│   │   │   │   ├── order_strategy_executor.py  # 订单策略执行
+│   │   │   │   ├── order_monitor.py       # 订单监控
+│   │   │   │   └── reduce_only_handler.py # Reduce-Only 处理器
+│   │   │   ├── guards/                    # 守卫模块
+│   │   │   │   └── reduce_only_guard.py   # Reduce Only 守卫
+│   │   │   ├── history/                   # 历史数据模块
+│   │   │   │   ├── history_calculator.py  # 历史数据计算器（天然价差/资金费率差）
+│   │   │   │   ├── spread_history_recorder.py  # 价差历史记录器（持续采样）
+│   │   │   │   ├── spread_history_reader.py    # 价差历史读取器（查询接口）
+│   │   │   │   └── chart_generator.py     # 图表生成器
+│   │   │   ├── risk_control/              # 风控模块
+│   │   │   │   ├── global_risk_controller.py   # 全局风控
+│   │   │   │   ├── error_backoff_controller.py # 错误避让控制器
+│   │   │   │   └── network_state.py            # 网络状态
+│   │   │   ├── state/                     # 状态模块
+│   │   │   │   └── symbol_state_manager.py     # 交易对状态管理
+│   │   │   └── utils/                     # 工具模块
+│   │   │       ├── orchestrator_utils.py  # 编排器工具
+│   │   │       └── risk_control_utils.py  # 风控工具（流动性、价格稳定性）
 │   │   ├── price_alert/ - 价格提醒服务
 │   │   │   ├── implementations/
 │   │   │   │   └── price_alert_service_impl.py  # 提醒服务实现
@@ -543,7 +774,9 @@ crypto-trading/
 │   │   ├── lighter_config.yaml
 │   │   ├── binance_config.yaml
 │   │   ├── okx_config.yaml
-│   │   └── edgex_config.yaml
+│   │   ├── edgex_config.yaml
+│   │   ├── paradex_config.yaml
+│   │   └── grvt_config.yaml
 │   ├── grid/                              # 网格配置
 │   │   ├── lighter_btc_perp_long.yaml
 │   │   ├── lighter_btc_perp_short.yaml
@@ -554,8 +787,13 @@ crypto-trading/
 │   ├── volume_maker/                      # 刷量配置
 │   │   ├── backpack_btc_volume_maker.yaml
 │   │   └── lighter_volume_maker.yaml
-│   ├── arbitrage/                         # 套利配置
-│   │   └── monitor.yaml
+│   ├── arbitrage/                         # 套利系统配置
+│   │   ├── monitor.yaml                   # 基础模式配置
+│   │   ├── monitor_v2.yaml                # V2 模式配置
+│   │   ├── monitor_lighter_gold.yaml      # Lighter 黄金监控配置
+│   │   ├── monitor_lighter_multi_btc.yaml # Lighter 多交易对配置
+│   │   ├── arbitrage_segmented.yaml       # 分段套利执行配置
+│   │   └── （其他套利配置）
 │   ├── price_alert/                       # 价格提醒配置
 │   │   └── binance_alert.yaml
 │   ├── symbol_conversion.yaml             # 交易对转换配置
@@ -574,6 +812,8 @@ crypto-trading/
 │   ├── start_lighter_volume_maker.sh      # 启动市价刷量
 │   ├── start_arbitrage_monitor.sh         # 启动套利监控
 │   ├── start_price_alert.sh               # 启动价格提醒
+│   ├── check_arbitrage_executor_legs.sh   # 套利执行日志检查（单腿成交/零成交检测）
+│   ├── check_lighter_ws_batch.sh          # Lighter WS批量订单监控
 │   ├── check_ports.sh                     # 端口检查
 │   ├── apply_log_optimization.sh          # 日志优化
 │   ├── release.sh                         # 发布脚本
@@ -632,6 +872,8 @@ crypto-trading/
 ├── 📚 docs/ - 文档
 │   ├── README.md                          # 文档总入口
 │   ├── INDEX.md                           # 文档索引
+│   ├── lighter_sdk_upgrade_guide.md       # Lighter SDK 升级指南
+│   ├── dependency_conflicts.md            # 依赖冲突详解
 │   ├── grid-trading/                      # 网格交易文档
 │   │   └── （70+ 篇详细文档）
 │   ├── grid_volatility_scanner/           # 网格波动率扫描器文档
@@ -682,8 +924,13 @@ crypto-trading/
 │   └── （其他日志文件）
 ├── 🐳 docker/ - Docker 配置
 │   └── README.md
-├── 📄 requirements.txt                    # Python 依赖
+├── 📄 requirements.txt                    # Python 依赖（主环境）
+├── 📄 requirements-py312.txt              # Python 3.12 依赖
+├── 📄 requirements-lighter-spot.txt       # Lighter 现货专用依赖
+├── 📜 setup_lighter_spot_env.sh           # Lighter 现货环境自动安装脚本
+├── 📜 activate_lighter_spot.sh            # Lighter 现货环境快捷激活脚本
 ├── 📖 README.md                           # 项目说明文档（本文件）
+├── 📖 LIGHTER_SPOT_SETUP.md               # Lighter 现货快速设置指南
 ├── 📋 PROJECT_STRUCTURE.md                # 项目结构说明
 ├── 📋 REST_API使用总结.md                  # REST API 使用总结
 ├── 📋 CHANGELOG.md                        # 变更日志
@@ -710,12 +957,14 @@ crypto-trading/
 | 市价模式 | `python3 run_lighter_volume_maker.py <配置文件>` | Lighter 市价刷量 |
 | 市价快速启动 | `./scripts/start_lighter_volume_maker.sh` | 快速启动 Lighter 刷量 |
 
-### 监控系统
+### 套利与监控系统
 
 | 脚本 | 命令 | 说明 |
 |------|------|------|
-| 套利监控 | `python3 run_arbitrage_monitor.py` | 启动套利监控系统 |
-| 套利监控快速启动 | `./scripts/start_arbitrage_monitor.sh` | 快速启动套利监控 |
+| 基础套利系统 | `python3 run_arbitrage_monitor.py` | 基础模式（历史数据决策+执行） |
+| 套利系统 V2 | `python3 run_arbitrage_monitor_v2.py` | V2 版本（增强监控+执行） |
+| 分段套利系统 | `python3 main_unified.py --config <配置> --monitor-config <监控>` | 网格模式套利执行系统 |
+| 套利快速启动 | `./scripts/start_arbitrage_monitor.sh` | 快速启动套利系统 |
 | 价格提醒 | `python3 run_price_alert.py <配置文件>` | 启动价格提醒系统 |
 | 价格提醒快速启动 | `./scripts/start_price_alert.sh` | 快速启动价格提醒 |
 
@@ -849,8 +1098,11 @@ API 层 (api/)
 - **[网格交易系统完整指南](docs/grid-trading/)** - 70+ 篇网格交易详细文档
 - **[网格波动率扫描器文档](grid_volatility_scanner/README.md)** - 扫描器使用指南
 - **[刷量系统文档](docs/volume-maker/)** - 42 篇刷量系统文档
-- **[套利监控系统文档](docs/arbitrage_monitor/)** - 10 篇套利监控文档
+- **[套利系统文档](docs/arbitrage_monitor/)** - 10 篇套利系统文档（监控+执行）
 - **[架构设计文档](docs/architecture/)** - 36 篇架构设计文档
+- **[Lighter 现货设置指南](LIGHTER_SPOT_SETUP.md)** - Lighter 现货快速开始
+- **[Lighter SDK 升级指南](docs/lighter_sdk_upgrade_guide.md)** - SDK 升级详细文档
+- **[依赖冲突详解](docs/dependency_conflicts.md)** - 依赖冲突和解决方案
 
 ### 交易所专题文档
 
@@ -935,6 +1187,53 @@ python3 grid_volatility_scanner/run_scanner.py --exchange hyperliquid
 
 扫描器会实时显示代币的APR排名，S级（≥500% APR）代币强烈推荐用于网格交易。
 
+### 9. 如何切换不同的虚拟环境？
+
+系统使用多个虚拟环境隔离不同的依赖：
+
+```bash
+# 主环境（套利、永续合约网格、刷量）
+source .venv-py312/bin/activate
+
+# Lighter 现货专用环境
+source activate_lighter_spot.sh
+# 或
+source .venv-lighter-spot/bin/activate
+
+# 退出当前环境
+deactivate
+```
+
+**为什么需要多个环境？** 因为不同 SDK 的依赖版本存在冲突，详见 [依赖冲突详解](docs/dependency_conflicts.md)。
+
+### 10. Lighter 现货交易如何配置？
+
+Lighter 现货交易需要特殊配置：
+
+```yaml
+# config/grid/lighter-long-spot-eth.yaml
+grid_system:
+  exchange: "lighter"
+  symbol: "ETH/USDC"
+  market_type: "spot"  # 必须设置为 spot
+  
+  spot_reserve:        # 现货预留配置
+    enabled: true
+    reserve_amount: 0.02
+    # ... 其他配置
+```
+
+详细设置请参考 [LIGHTER_SPOT_SETUP.md](LIGHTER_SPOT_SETUP.md)。
+
+### 11. 如何解决依赖冲突？
+
+如果遇到依赖冲突（如 `eth-account` 版本不兼容），请：
+
+1. 使用对应的虚拟环境
+2. 参考 [依赖冲突详解](docs/dependency_conflicts.md)
+3. 检查当前环境：`pip show eth-account`
+4. 验证环境：`python -c "import lighter; print(lighter.__version__)"`
+
 ## 🚨 注意事项
 
 1. **API 密钥安全**：请妥善保管 API 密钥，不要上传到公共仓库
@@ -944,6 +1243,9 @@ python3 grid_volatility_scanner/run_scanner.py --exchange hyperliquid
 5. **现货做空**：现货市场不支持做空，仅支持做多网格
 6. **手续费**：不同交易所手续费不同，请在配置文件中正确设置 `fee_rate`
 7. **精度问题**：不同交易对的数量精度不同，请在配置中正确设置 `quantity_precision`
+8. **环境隔离**：Lighter 现货需使用独立虚拟环境（`.venv-lighter-spot`），不要在主环境中运行
+9. **依赖冲突**：不同脚本需要不同环境，运行前请确认已激活正确的虚拟环境
+10. **SDK 版本**：Lighter 永续合约使用旧版 SDK，现货使用新版 SDK 1.0.1，不可混用
 
 ## 📞 支持与反馈
 
@@ -952,3 +1254,4 @@ python3 grid_volatility_scanner/run_scanner.py --exchange hyperliquid
 ---
 
 **多交易所策略自动化系统 v2.0.0** - 企业级加密货币自动化交易平台
+

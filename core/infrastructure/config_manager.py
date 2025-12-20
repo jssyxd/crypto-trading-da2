@@ -11,6 +11,8 @@ from dataclasses import dataclass
 import logging
 
 logger = logging.getLogger(__name__)
+# 🔥 关键修复：阻止日志传播到父logger（避免输出到终端UI）
+logger.propagate = False
 
 @dataclass
 class ExchangeConfig:

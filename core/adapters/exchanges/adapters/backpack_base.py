@@ -100,42 +100,43 @@ class BackpackBase:
     
     def _map_symbol(self, symbol: str) -> str:
         """
-        映射交易对符号
+        映射交易对符号 -> Backpack要求使用下划线格式 (如 BTC_USDC_PERP)
         
-        @deprecated: 建议使用统一的符号转换服务
+        🔥 优化：移除弃用警告（避免日志开销）
         """
-        if not hasattr(self, '_deprecation_logged_map'):
-            if self.logger:
-                self.logger.warning("⚠️ _map_symbol方法已弃用，建议使用统一的符号转换服务")
-            self._deprecation_logged_map = True
+        if not symbol:
+            return ""
         
         # 首先检查是否有显式映射
         if symbol in self._symbol_mapping:
             return self._symbol_mapping[symbol]
         
-        # 对于永续合约，Backpack需要保留_PERP后缀
-        # 直接返回完整符号，保留_PERP后缀
-        return symbol
+        normalized = symbol.strip().upper()
+        # Backpack接口仅接受下划线格式
+        normalized = normalized.replace('/', '_').replace('-', '_').replace(':', '_')
+        # 去除重复的下划线（例如 BTC__USDC__PERP）
+        normalized = '_'.join(filter(None, normalized.split('_')))
+        
+        return normalized
     
     def _reverse_map_symbol(self, exchange_symbol: str) -> str:
         """
-        反向映射交易对符号
+        反向映射交易对符号 -> 转回统一的连字符格式 (如 BTC-USDC-PERP)
         
-        @deprecated: 建议使用统一的符号转换服务
+        🔥 优化：移除弃用警告（避免日志开销）
         """
-        if not hasattr(self, '_deprecation_logged_reverse'):
-            if self.logger:
-                self.logger.warning("⚠️ _reverse_map_symbol方法已弃用，建议使用统一的符号转换服务")
-            self._deprecation_logged_reverse = True
         
         # 首先检查显式映射
         reverse_mapping = {v: k for k, v in self._symbol_mapping.items()}
         if exchange_symbol in reverse_mapping:
             return reverse_mapping[exchange_symbol]
         
-        # 现在Backpack返回的符号已经包含_PERP后缀
-        # 所以不需要额外添加后缀，直接返回原符号
-        return exchange_symbol
+        if not exchange_symbol:
+            return ""
+        
+        normalized = exchange_symbol.strip().upper()
+        normalized = normalized.replace('_', '-').replace('/', '-')
+        return '-'.join(filter(None, normalized.split('-')))
     
     def _safe_decimal(self, value: Any) -> Optional[Decimal]:
         """安全转换为Decimal"""

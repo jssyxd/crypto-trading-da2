@@ -70,6 +70,13 @@ class GridConfig:
     grid_type: GridType                     # 网格类型（做多/做空）
     grid_interval: Decimal                  # 网格间隔（等差）
     order_amount: Decimal                   # 每格订单数量（基础金额）
+    
+    # 🔥 市场类型参数（现货/永续合约）
+    market_type: str = "perp"               # 市场类型（"spot"=现货, "perp"=永续合约，默认永续合约）
+    # 说明：不同市场类型的交易逻辑
+    # - spot（现货）：无开仓/平仓概念，只有买入/卖出，不使用 reduce_only
+    # - perp（永续合约）：有开仓/平仓概念，平仓时需要 reduce_only=True
+    # 💡 健康检查等功能会根据此参数自动适配交易逻辑
 
     # 价格区间参数（可选参数，价格移动网格时不需要）
     lower_price: Optional[Decimal] = None   # 价格下限（价格移动网格时可选）

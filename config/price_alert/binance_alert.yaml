@@ -27,7 +27,7 @@ price_alert:
       # 价格目标报警
       price_alert:
         enabled: true              # 是否启用价格报警
-        upper_limit: 110000        # 价格上限 - 突破此价格报警（0表示不设置）
+        upper_limit: 120000        # 价格上限 - 突破此价格报警（0表示不设置）
         lower_limit: 95000        # 价格下限 - 跌破此价格报警（0表示不设置）
     
     - symbol: "ETH/USDT"

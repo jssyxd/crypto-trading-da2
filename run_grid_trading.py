@@ -25,9 +25,17 @@
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 """
 
+# 🔥 加载环境变量（必须在其他导入之前）
+from dotenv import load_dotenv
+from pathlib import Path as EnvPath
+env_path = EnvPath(__file__).parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+
 from core.adapters.exchanges.utils import setup_optimized_logging
 from core.adapters.exchanges.models import ExchangeType
 from core.adapters.exchanges import ExchangeFactory, ExchangeConfig
+from core.utils.config_loader import load_exchange_auth
 from core.services.grid.terminal_ui import GridTerminalUI
 from core.services.grid.coordinator import GridCoordinator
 from core.services.grid.implementations import (
@@ -258,9 +266,13 @@ def detect_market_type(symbol: str, exchange_name: str) -> ExchangeType:
 
     # Lighter 交易所
     elif exchange_lower == "lighter":
-        # Lighter是永续合约交易所，所有交易对都是永续合约
-        # 符号格式：BTC-USD, ETH-USD, SOL-USD等
-        return ExchangeType.PERPETUAL
+        # Lighter符号格式：
+        # - 现货: ETH/USDC (market_id >= 2048, 包含斜杠)
+        # - 永续: ETH, BTC, SOL (market_id < 2048, 不含斜杠)
+        if "/" in symbol_upper or "-SPOT" in symbol_upper:
+            return ExchangeType.SPOT
+        else:
+            return ExchangeType.PERPETUAL
 
     # 其他交易所默认为永续合约
     else:
@@ -277,8 +289,6 @@ async def create_exchange_adapter(config_data: dict):
     Returns:
         交易所适配器
     """
-    import os
-
     grid_config = config_data['grid_system']
     exchange_name = grid_config['exchange'].lower()
     symbol = grid_config['symbol']
@@ -288,59 +298,18 @@ async def create_exchange_adapter(config_data: dict):
 
     print(f"   - 市场类型: {market_type.value}")
 
-    # 优先级：环境变量 > 交易所配置文件 > 空字符串
-    api_key = os.getenv(f"{exchange_name.upper()}_API_KEY")
-    api_secret = os.getenv(f"{exchange_name.upper()}_API_SECRET")
-    wallet_address = os.getenv(
-        f"{exchange_name.upper()}_WALLET_ADDRESS")  # 用于 Hyperliquid
+    auth = load_exchange_auth(exchange_name)
+    api_key = auth.api_key
+    api_secret = auth.api_secret or auth.private_key
+    wallet_address = auth.wallet_address
 
-    # 如果环境变量没有设置，尝试从交易所配置文件读取
-    if not api_key or not api_secret:
-        try:
-            exchange_config_path = Path(
-                f"config/exchanges/{exchange_name}_config.yaml")
-            if exchange_config_path.exists():
-                with open(exchange_config_path, 'r', encoding='utf-8') as f:
-                    exchange_config_data = yaml.safe_load(f)
-
-                auth_config = exchange_config_data.get(
-                    exchange_name, {}).get('authentication', {})
-
-                # 🔥 修复：不同交易所使用不同的认证方式
-                if exchange_name == "hyperliquid":
-                    # Hyperliquid 使用 private_key 作为主密钥
-                    api_key = api_key or auth_config.get('private_key', "")
-                    api_secret = api_secret or auth_config.get(
-                        'private_key', "")  # 同一个密钥
-                    wallet_address = wallet_address or auth_config.get(
-                        'wallet_address', "")
-                elif exchange_name == "lighter":
-                    # Lighter 使用 API Key私钥和账户索引
-                    api_config = exchange_config_data.get('api_config', {})
-                    auth_config = api_config.get('auth', {})
-                    api_key = api_key or auth_config.get(
-                        'api_key_private_key', "")
-                    api_secret = api_secret or auth_config.get(
-                        'api_key_private_key', "")
-                    # Lighter特殊配置将在创建适配器时单独处理
-                else:
-                    # 其他交易所使用标准的 api_key/api_secret
-                    api_key = api_key or auth_config.get('api_key', "")
-                    api_secret = api_secret or auth_config.get(
-                        'private_key', "") or auth_config.get('api_secret', "")
-                    wallet_address = wallet_address or auth_config.get(
-                        'wallet_address', "")
-
-                if api_key and api_secret:
-                    print(f"   ✓ 从配置文件读取API密钥: {exchange_config_path}")
-                    if exchange_name == "hyperliquid" and wallet_address:
-                        print(
-                            f"   ✓ 钱包地址: {wallet_address[:10]}...{wallet_address[-6:]}")
-        except Exception as e:
-            print(f"   ⚠️  无法读取交易所配置文件: {e}")
+    if api_key:
+        print("   ✓ 检测到 API Key 配置")
+    if wallet_address:
+        print(f"   ✓ 钱包地址: {wallet_address[:10]}...{wallet_address[-6:]}")
 
     # 如果仍然没有密钥，给出警告
-    if not api_key or not api_secret:
+    if not api_key:
         print(f"   ⚠️  警告：未找到API密钥配置")
         print(
             f"   提示：请设置环境变量或在 config/exchanges/{exchange_name}_config.yaml 中配置")
@@ -410,10 +379,26 @@ async def create_exchange_adapter(config_data: dict):
             exchange_type=market_type,  # 🔥 使用自动检测的市场类型
             api_key=api_key or "",
             api_secret=api_secret or "",
-            wallet_address=wallet_address,  # Hyperliquid 需要
+            wallet_address=wallet_address,
             testnet=False,
             enable_websocket=True,
-            enable_auto_reconnect=True
+            enable_auto_reconnect=True,
+            extra_params={
+                **(
+                    grid_config.get('extra_params', {})
+                    if isinstance(grid_config.get('extra_params'), dict)
+                    else {}
+                ),
+                **({
+                    'jwt_token': auth.jwt_token
+                } if auth.jwt_token else {}),
+                **({
+                    'l2_address': auth.l2_address
+                } if auth.l2_address else {}),
+                **({
+                    'wallet_address': wallet_address
+                } if wallet_address else {})
+            }
         )
 
     # 使用工厂创建适配器
@@ -500,6 +485,9 @@ async def main(config_path: str = "config/grid/default_grid.yaml", debug: bool =
             is_spot = ":SPOT" in symbol.upper()
         elif exchange_name == "backpack":
             is_spot = "_SPOT" in symbol.upper() or "SPOT" in symbol.upper()
+        elif exchange_name == "lighter":
+            # Lighter 现货: 符号包含斜杠 (如 ETH/USDC)
+            is_spot = "/" in symbol.upper()
 
         # 如果是现货且选择了做空网格，拒绝启动
         if is_spot and grid_config.grid_type.value in ["short", "martingale_short", "follow_short"]:

@@ -38,13 +38,24 @@ class ArbitrageConfig:
 
 @dataclass
 class PriceSpread:
-    """价差数据"""
+    """
+    价差数据（基于订单簿）
+    
+    使用订单簿买1/卖1价格计算套利机会：
+    - 正向套利：在A交易所卖1价买入，在B交易所买1价卖出
+    - 只保留有利可图的价差（B买1价 > A卖1价）
+    """
     symbol: str                     # 标准化交易对符号（如BTC-USDC-PERP）
-    exchange_buy: str               # 买入交易所（价格低）
-    exchange_sell: str              # 卖出交易所（价格高）
-    price_buy: Decimal             # 买入价格
-    price_sell: Decimal            # 卖出价格
-    spread_abs: Decimal            # 绝对价差
+    exchange_buy: str               # 买入交易所（在此交易所以卖1价买入）
+    exchange_sell: str              # 卖出交易所（在此交易所以买1价卖出）
+    
+    # 🔥 订单簿买卖价（改造后）
+    price_buy: Decimal             # 买入价格（exchange_buy的卖1价 = ask price）
+    price_sell: Decimal            # 卖出价格（exchange_sell的买1价 = bid price）
+    size_buy: Decimal              # 买入深度（exchange_buy的卖1数量）
+    size_sell: Decimal             # 卖出深度（exchange_sell的买1数量）
+    
+    spread_abs: Decimal            # 绝对价差（price_sell - price_buy）
     spread_pct: Decimal            # 百分比价差
     timestamp: datetime            # 时间戳
     

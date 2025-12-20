@@ -101,9 +101,12 @@ class OrderHealthChecker:
         self._last_trigger_time = 0  # 上次触发时间
         self._trigger_interval = 5  # 触发间隔（秒），防止频繁触发
 
-        self.logger.debug(
+        # 🔥 输出市场类型配置
+        market_type = getattr(config, 'market_type', 'perp')
+        self.logger.info(
             f"订单健康检查器初始化: 网格数={config.grid_count}, "
-            f"反手距离={config.reverse_order_grid_distance}格"
+            f"反手距离={config.reverse_order_grid_distance}格, "
+            f"市场类型={market_type}"
         )
 
     async def _fetch_orders_and_positions(self) -> Tuple[List, List[PositionData]]:
@@ -557,6 +560,10 @@ class OrderHealthChecker:
     async def _close_position(self, side: PositionSide, amount: Decimal, current_price: Decimal):
         """
         平仓（使用市价单）
+        
+        🔥 现货/永续合约兼容处理：
+        - 现货模式：直接市价买入/卖出，不使用 reduce_only
+        - 永续合约模式：使用 reduce_only=True 平仓
 
         Args:
             side: 持仓方向（要平的仓位）
@@ -570,47 +577,82 @@ class OrderHealthChecker:
             else:
                 order_side = ExchangeOrderSide.BUY
 
-            # 使用市价单平仓，确保成交
-            self.logger.debug(
-                f"使用市价单平仓: {order_side.value} {amount} (参考价格: {current_price})")
-
-            # 🔥 多交易所兼容处理
-            # Lighter: 必须使用 place_market_order + reduce_only=True
-            # 其他交易所: 使用 create_order
-            if hasattr(self.engine.exchange, 'place_market_order'):
-                # Lighter 交易所：使用专用方法确保正确平仓
-                self.logger.debug("使用 Lighter 专用平仓方法（reduce_only=True）")
-                order = await self.engine.exchange.place_market_order(
-                    symbol=self.config.symbol,
-                    side=order_side,
-                    quantity=amount,
-                    reduce_only=True  # 🔥 Lighter必需：只减仓模式
-                )
+            # 🔥 判断市场类型
+            is_spot = self._is_spot_mode()
+            self.logger.info(f"🔍 _close_position: is_spot={is_spot}, side={side}, amount={amount}")
+            
+            if is_spot:
+                # ==================== 现货模式 ====================
+                # 现货无"平仓"概念，直接市价买入或卖出
+                self.logger.debug(
+                    f"[现货模式] 市价单调整持仓: {order_side.value} {amount} (参考价格: {current_price})")
+                
+                if hasattr(self.engine.exchange, 'place_market_order'):
+                    # Lighter 现货：不使用 reduce_only
+                    self.logger.debug("使用 Lighter 现货市价单（无 reduce_only）")
+                    order = await self.engine.exchange.place_market_order(
+                        symbol=self.config.symbol,
+                        side=order_side,
+                        quantity=amount,
+                        reduce_only=False  # 🔥 现货模式：不使用 reduce_only
+                    )
+                else:
+                    # 其他交易所现货：使用通用方法
+                    self.logger.debug("使用通用市价单方法（create_order）")
+                    order = await self.engine.exchange.create_order(
+                        symbol=self.config.symbol,
+                        side=order_side,
+                        order_type=OrderType.MARKET,
+                        amount=amount,
+                        price=current_price
+                    )
             else:
-                # Backpack/Hyperliquid: 使用通用方法
-                self.logger.debug("使用通用平仓方法（create_order）")
-                order = await self.engine.exchange.create_order(
-                    symbol=self.config.symbol,
-                    side=order_side,
-                    order_type=OrderType.MARKET,
-                    amount=amount,
-                    price=current_price  # Hyperliquid需要价格计算滑点
-                )
+                # ==================== 永续合约模式 ====================
+                # 使用市价单平仓，确保成交
+                self.logger.debug(
+                    f"[永续合约模式] 使用市价单平仓: {order_side.value} {amount} (参考价格: {current_price})")
+
+                # 🔥 多交易所兼容处理
+                # Lighter: 必须使用 place_market_order + reduce_only=True
+                # 其他交易所: 使用 create_order
+                if hasattr(self.engine.exchange, 'place_market_order'):
+                    # Lighter 交易所：使用专用方法确保正确平仓
+                    self.logger.debug("使用 Lighter 专用平仓方法（reduce_only=True）")
+                    order = await self.engine.exchange.place_market_order(
+                        symbol=self.config.symbol,
+                        side=order_side,
+                        quantity=amount,
+                        reduce_only=True  # 🔥 Lighter必需：只减仓模式
+                    )
+                else:
+                    # Backpack/Hyperliquid: 使用通用方法
+                    self.logger.debug("使用通用平仓方法（create_order）")
+                    order = await self.engine.exchange.create_order(
+                        symbol=self.config.symbol,
+                        side=order_side,
+                        order_type=OrderType.MARKET,
+                        amount=amount,
+                        price=current_price  # Hyperliquid需要价格计算滑点
+                    )
 
             if order is None:
                 raise Exception(
-                    f"平仓失败: 交易所返回None ({order_side.value} {amount})")
+                    f"{'调整持仓' if is_spot else '平仓'}失败: 交易所返回None ({order_side.value} {amount})")
 
             self.logger.debug(
-                f"✅ 平仓市价单已提交: {order_side.value} {amount}, OrderID={order.id}")
+                f"✅ {'持仓调整' if is_spot else '平仓'}市价单已提交: {order_side.value} {amount}, OrderID={order.id}")
 
         except Exception as e:
-            self.logger.error(f"❌ 平仓失败: {e}")
+            self.logger.error(f"❌ {'持仓调整' if is_spot else '平仓'}失败: {e}")
             raise
 
     async def _open_position(self, side: PositionSide, amount: Decimal, current_price: Decimal):
         """
         开仓（使用市价单）
+        
+        🔥 现货/永续合约兼容处理：
+        - 现货模式：直接市价买入/卖出（无"开仓"概念）
+        - 永续合约模式：使用 reduce_only=False 开仓
 
         Args:
             side: 持仓方向（要开的仓位）
@@ -624,25 +666,30 @@ class OrderHealthChecker:
             else:
                 order_side = ExchangeOrderSide.SELL
 
-            # 使用市价单开仓，确保成交
+            # 🔥 判断市场类型
+            is_spot = self._is_spot_mode()
+            self.logger.info(f"🔍 _open_position: is_spot={is_spot}, side={side}, amount={amount}")
+            
+            # 使用市价单开仓/买入，确保成交
+            action_desc = "市价单买入" if is_spot else "市价单开仓"
             self.logger.debug(
-                f"使用市价单开仓: {order_side.value} {amount} (参考价格: {current_price})")
+                f"[{'现货' if is_spot else '永续合约'}模式] 使用{action_desc}: {order_side.value} {amount} (参考价格: {current_price})")
 
             # 🔥 多交易所兼容处理
             # Lighter: 使用 place_market_order + reduce_only=False
             # 其他交易所: 使用 create_order
             if hasattr(self.engine.exchange, 'place_market_order'):
                 # Lighter 交易所：使用专用方法
-                self.logger.debug("使用 Lighter 专用开仓方法（reduce_only=False）")
+                self.logger.debug(f"使用 Lighter 专用方法（reduce_only=False）")
                 order = await self.engine.exchange.place_market_order(
                     symbol=self.config.symbol,
                     side=order_side,
                     quantity=amount,
-                    reduce_only=False  # 🔥 Lighter：允许开仓
+                    reduce_only=False  # 🔥 Lighter：允许开仓/买入
                 )
             else:
                 # Backpack/Hyperliquid: 使用通用方法
-                self.logger.debug("使用通用开仓方法（create_order）")
+                self.logger.debug("使用通用方法（create_order）")
                 order = await self.engine.exchange.create_order(
                     symbol=self.config.symbol,
                     side=order_side,
@@ -654,13 +701,13 @@ class OrderHealthChecker:
 
             if order is None:
                 raise Exception(
-                    f"开仓失败: 交易所返回None ({order_side.value} {amount})")
+                    f"{'买入' if is_spot else '开仓'}失败: 交易所返回None ({order_side.value} {amount})")
 
             self.logger.debug(
-                f"✅ 开仓市价单已提交: {order_side.value} {amount}, OrderID={order.id}")
+                f"✅ {'买入' if is_spot else '开仓'}市价单已提交: {order_side.value} {amount}, OrderID={order.id}")
 
         except Exception as e:
-            self.logger.error(f"❌ 开仓失败: {e}")
+            self.logger.error(f"❌ {'买入' if is_spot else '开仓'}失败: {e}")
             raise
 
     async def perform_health_check(
@@ -2222,11 +2269,28 @@ class OrderHealthChecker:
         """判断是否是现货模式"""
         try:
             from ....adapters.exchanges.interface import ExchangeType
+
+            # 1) 优先检查网格配置中的 market_type
+            market_type = getattr(self.config, 'market_type', 'perp')
+            self.logger.info(f"🔍 健康检查-市场类型判断: config.market_type='{market_type}'")
+            
+            if market_type == 'spot':
+                self.logger.info("✅ 确认为现货模式（来自 config.market_type）")
+                return True
+
+            # 2) 再检查交易所配置（ExchangeConfig）中的 exchange_type
             if hasattr(self.engine, 'exchange') and hasattr(self.engine.exchange, 'config'):
-                is_spot = self.engine.exchange.config.exchange_type == ExchangeType.SPOT
-                return is_spot
+                exchange_type = getattr(self.engine.exchange.config, 'exchange_type', None)
+                self.logger.info(f"🔍 健康检查-交易所类型: exchange.config.exchange_type={exchange_type}")
+                if exchange_type == ExchangeType.SPOT:
+                    self.logger.info("✅ 确认为现货模式（来自 exchange.config.exchange_type）")
+                    return True
+
+            self.logger.info("ℹ️ 判定为永续合约模式（market_type 非 'spot'）")
         except Exception as e:
             self.logger.error(f"❌ 判断现货模式失败: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
         return False
 
     async def _query_spot_position(self) -> List[PositionData]:

@@ -78,6 +78,24 @@ class GridVolatilityScanner:
         self._failed_subscribe_symbols = []  # 订阅失败的代币列表
         self._received_ticker_symbols = set()  # 实际收到价格推送的代币集合
         self._no_data_symbols = []  # 订阅成功但无数据的代币列表
+        
+        # 🔥 Ticker接收统计（用于诊断订阅问题）
+        self._ticker_received_count = 0  # 收到的ticker总数
+        self._ticker_matched_count = 0  # 匹配成功的ticker数
+        self._ticker_unmatched_symbols = set()  # 未匹配的symbol集合
+
+        # 🔥 WebSocket连接监控（新增）
+        self._last_data_time: Dict[str, datetime] = {}  # 每个symbol的最后数据接收时间
+        self._connection_check_interval = 60  # 连接检查间隔（秒）
+        self._data_timeout_seconds = 120  # 数据超时阈值（秒）
+        self._startup_grace_period = 120  # 启动缓冲期（秒）
+        self._is_reconnecting = False  # 是否正在重连
+        self._reconnect_count = 0  # 重连次数（重连成功后重置）
+        self._total_reconnect_count = 0  # 🔥 总重连次数（从启动后累计，不重置）
+        self._reconnect_base_delay = 2.0  # 🔥 基础退避延迟（秒）
+        self._reconnect_max_delay = 60.0  # 🔥 最大退避延迟（秒）- 无限重连，延迟上限60秒
+        self._last_health_check_log = datetime.now()  # 上次健康检查日志时间
+        self._health_check_log_interval = 300  # 健康检查日志间隔（秒）
 
         logger.info("网格波动率扫描器初始化")
 
@@ -363,8 +381,17 @@ class GridVolatilityScanner:
         skipped_symbols = []
 
         for market in markets:
+            symbol = None
             try:
-                symbol = market.get('symbol', '')
+                # 支持两种格式：字典格式 {'symbol': 'BTC-USD'} 或字符串格式 'BTC-USD'
+                if isinstance(market, dict):
+                    symbol = market.get('symbol', '')
+                elif isinstance(market, str):
+                    symbol = market
+                else:
+                    logger.warning(f"不支持的市场格式: {type(market)}, 值: {market}")
+                    continue
+                
                 if not symbol:
                     continue
 
@@ -394,7 +421,9 @@ class GridVolatilityScanner:
                 symbols_to_monitor.append(symbol)
 
             except Exception as e:
-                logger.error(f"处理市场 {symbol} 失败: {e}")
+                # 安全处理：如果symbol未定义，使用market的字符串表示
+                error_symbol = symbol if symbol else str(market)
+                logger.error(f"处理市场 {error_symbol} 失败: {e}")
                 continue
 
         logger.info(f"📊 将监控 {len(symbols_to_monitor)} 个市场")
@@ -433,6 +462,22 @@ class GridVolatilityScanner:
             symbol_map[monitor_symbol] = monitor_symbol
 
         logger.info(f"📋 构建symbol映射表，共 {len(symbol_map)} 个映射")
+        
+        # 🔥 输出映射表详细信息（前20个，用于调试）
+        logger.info("=" * 80)
+        logger.info("📋 Symbol映射表详情（前20个）：")
+        logger.info("=" * 80)
+        for idx, (key, value) in enumerate(list(symbol_map.items())[:20], 1):
+            logger.info(f"  {idx}. {key} → {value}")
+        if len(symbol_map) > 20:
+            logger.info(f"  ... 还有 {len(symbol_map) - 20} 个映射")
+        logger.info("=" * 80)
+
+        # 🔥 重置ticker接收统计（用于调试订阅问题）
+        # 已在__init__中初始化，这里重置
+        self._ticker_received_count = 0
+        self._ticker_matched_count = 0
+        self._ticker_unmatched_symbols = set()
 
         # 定义统一回调（只注册一次，处理所有symbol）
         async def unified_ticker_callback(ticker):
@@ -449,76 +494,127 @@ class GridVolatilityScanner:
                 ticker_symbol = getattr(ticker, 'symbol', None)
                 if not ticker_symbol:
                     return
+                
+                self._ticker_received_count += 1
 
                 # 🔥 使用映射表快速查找
                 matched_symbol = symbol_map.get(ticker_symbol)
 
                 if matched_symbol:
+                    self._ticker_matched_count += 1
                     await self._on_ticker_update(matched_symbol, ticker)
-                # else:
-                #     # 调试：记录未匹配的symbol
-                #     logger.debug(f"未匹配的ticker: {ticker_symbol}")
+                    
+                    # 🔥 每收到100个ticker，输出一次统计（避免日志过多）
+                    if self._ticker_matched_count % 100 == 1:
+                        logger.debug(
+                            f"📊 Ticker统计: 收到{self._ticker_received_count}个, "
+                            f"匹配{self._ticker_matched_count}个, "
+                            f"未匹配{len(self._ticker_unmatched_symbols)}个"
+                        )
+                else:
+                    # 🔥 记录未匹配的symbol（用于调试）
+                    if ticker_symbol not in self._ticker_unmatched_symbols:
+                        self._ticker_unmatched_symbols.add(ticker_symbol)
+                        logger.warning(
+                            f"⚠️  收到未订阅的ticker: {ticker_symbol} "
+                            f"(总共{len(self._ticker_unmatched_symbols)}个未匹配)"
+                        )
 
             except Exception as e:
                 logger.error(
-                    f"统一回调处理失败 (ticker={getattr(ticker, 'symbol', 'unknown')}): {e}")
+                    f"统一回调处理失败 (ticker={getattr(ticker, 'symbol', 'unknown')}): {e}",
+                    exc_info=True
+                )
 
-        # 🔥 分批订阅（避免一次性发送过多订阅消息导致部分失败）
-        batch_size = 20  # 每批20个
-        total_batches = (len(symbols_to_monitor) + batch_size - 1) // batch_size
-        
-        logger.info(f"📊 使用分批订阅策略: 每批{batch_size}个，共{total_batches}批")
-        
-        for batch_idx in range(total_batches):
-            start_idx = batch_idx * batch_size
-            end_idx = min((batch_idx + 1) * batch_size, len(symbols_to_monitor))
-            batch_symbols = symbols_to_monitor[start_idx:end_idx]
+        # 🔥 优先使用批量订阅（如果适配器支持）
+        if hasattr(self.adapter, 'batch_subscribe_tickers'):
+            # 使用批量订阅方法（参考套利监控中Lighter的订阅方式）
+            logger.info(f"📊 使用批量订阅方法: {len(symbols_to_monitor)} 个代币")
+            try:
+                await self.adapter.batch_subscribe_tickers(
+                    symbols=symbols_to_monitor,
+                    callback=unified_ticker_callback
+                )
+                subscription_count = len(symbols_to_monitor)
+                failed_count = 0  # 🔥 批量订阅成功，失败数为0
+                self._subscribed_symbols_list = symbols_to_monitor.copy()
+                logger.info(f"✅ 批量订阅完成: {subscription_count} 个代币")
+            except Exception as e:
+                logger.error(f"❌ 批量订阅失败，回退到逐个订阅: {e}")
+                import traceback
+                logger.debug(f"   详细错误:\n{traceback.format_exc()}")
+                # 回退到逐个订阅
+                subscription_count = 0
+                failed_count = 0
+                for idx, symbol in enumerate(symbols_to_monitor):
+                    try:
+                        if idx == 0:
+                            await self.adapter.subscribe_ticker(symbol, unified_ticker_callback)
+                        else:
+                            await self.adapter.subscribe_ticker(symbol, None)
+                        subscription_count += 1
+                        self._subscribed_symbols_list.append(symbol)
+                    except Exception as e2:
+                        failed_count += 1
+                        self._failed_subscribe_symbols.append((symbol, str(e2)))
+                        logger.error(f"❌ 订阅失败: {symbol} | 原因: {e2}")
+        else:
+            # 🔥 适配器不支持批量订阅，使用分批逐个订阅（优化版）
+            batch_size = 20  # 每批20个
+            total_batches = (len(symbols_to_monitor) + batch_size - 1) // batch_size
             
-            logger.info(f"📡 正在订阅第{batch_idx + 1}/{total_batches}批: {len(batch_symbols)}个代币...")
+            logger.info(f"📊 使用分批订阅策略: 每批{batch_size}个，共{total_batches}批")
             
-            # 订阅本批次的所有symbol
-            for idx, symbol in enumerate(batch_symbols):
-                try:
-                    absolute_idx = start_idx + idx
-                    
-                    if absolute_idx == 0:
-                        # 🔥 第一个symbol：注册统一回调
-                        await self.adapter.subscribe_ticker(
-                            symbol=symbol,
-                            callback=unified_ticker_callback
-                        )
-                        logger.info(f"✅ {symbol} (首次注册统一回调)")
-                    else:
-                        # 🔥 后续symbol：传None复用统一回调
-                        await self.adapter.subscribe_ticker(
-                            symbol=symbol,
-                            callback=None
-                        )
+            for batch_idx in range(total_batches):
+                start_idx = batch_idx * batch_size
+                end_idx = min((batch_idx + 1) * batch_size, len(symbols_to_monitor))
+                batch_symbols = symbols_to_monitor[start_idx:end_idx]
+                
+                logger.info(f"📡 正在订阅第{batch_idx + 1}/{total_batches}批: {len(batch_symbols)}个代币...")
+                
+                # 订阅本批次的所有symbol
+                for idx, symbol in enumerate(batch_symbols):
+                    try:
+                        absolute_idx = start_idx + idx
+                        
+                        if absolute_idx == 0:
+                            # 🔥 第一个symbol：注册统一回调
+                            await self.adapter.subscribe_ticker(
+                                symbol=symbol,
+                                callback=unified_ticker_callback
+                            )
+                            logger.info(f"✅ {symbol} (首次注册统一回调)")
+                        else:
+                            # 🔥 后续symbol：传None复用统一回调
+                            await self.adapter.subscribe_ticker(
+                                symbol=symbol,
+                                callback=None
+                            )
 
-                    subscription_count += 1
-                    # 🔥 记录成功订阅的代币
-                    self._subscribed_symbols_list.append(symbol)
-                    logger.debug(f"📡 订阅成功: {symbol} (#{subscription_count})")
+                        subscription_count += 1
+                        # 🔥 记录成功订阅的代币
+                        self._subscribed_symbols_list.append(symbol)
+                        logger.debug(f"📡 订阅成功: {symbol} (#{subscription_count})")
 
-                    # 每5个订阅添加小延迟，避免消息发送过快
-                    if subscription_count % 5 == 0:
-                        await asyncio.sleep(0.05)  # 50ms延迟
+                        # 每5个订阅添加小延迟，避免消息发送过快
+                        if subscription_count % 5 == 0:
+                            await asyncio.sleep(0.05)  # 50ms延迟
 
-                except Exception as e:
-                    failed_count += 1
-                    # 🔥 记录订阅失败的代币和原因
-                    self._failed_subscribe_symbols.append((symbol, str(e)))
-                    logger.error(f"❌ 订阅失败: {symbol} | 原因: {e}")
-                    import traceback
-                    logger.debug(f"   详细错误:\n{traceback.format_exc()}")
-                    continue
+                    except Exception as e:
+                        failed_count += 1
+                        # 🔥 记录订阅失败的代币和原因
+                        self._failed_subscribe_symbols.append((symbol, str(e)))
+                        logger.error(f"❌ 订阅失败: {symbol} | 原因: {e}")
+                        import traceback
+                        logger.debug(f"   详细错误:\n{traceback.format_exc()}")
+                        continue
 
-            # 🔥 每批之间等待更长时间，确保WebSocket消息发送完毕
-            if batch_idx < total_batches - 1:
-                logger.info(f"⏸️  第{batch_idx + 1}批完成，等待1秒后继续...")
-                await asyncio.sleep(1.0)
-            
-            logger.info(f"✅ 第{batch_idx + 1}/{total_batches}批订阅完成: 已订阅{subscription_count}个，失败{failed_count}个")
+                # 🔥 每批之间等待更长时间，确保WebSocket消息发送完毕
+                if batch_idx < total_batches - 1:
+                    logger.info(f"⏸️  第{batch_idx + 1}批完成，等待1秒后继续...")
+                    await asyncio.sleep(1.0)
+                
+                logger.info(f"✅ 第{batch_idx + 1}/{total_batches}批订阅完成: 已订阅{subscription_count}个，失败{failed_count}个")
 
         # 🔥 记录订阅数量
         self._subscribed_symbols_count = subscription_count
@@ -529,6 +625,17 @@ class GridVolatilityScanner:
         logger.info(f"✅ 订阅成功: {subscription_count} 个")
         logger.info(f"❌ 订阅失败: {failed_count} 个")
         logger.info(f"📡 总计尝试: {subscription_count + failed_count} 个")
+        
+        # 🔥 输出订阅成功的代币列表（前30个，用于调试）
+        if self._subscribed_symbols_list:
+            logger.info("=" * 80)
+            logger.info(f"📋 成功订阅的代币列表（前30个）：")
+            logger.info("=" * 80)
+            for idx, symbol in enumerate(self._subscribed_symbols_list[:30], 1):
+                logger.info(f"  {idx}. {symbol}")
+            if len(self._subscribed_symbols_list) > 30:
+                logger.info(f"  ... 还有 {len(self._subscribed_symbols_list) - 30} 个")
+            logger.info("=" * 80)
         
         # 如果有订阅失败的代币，立即输出列表
         if self._failed_subscribe_symbols:
@@ -544,6 +651,14 @@ class GridVolatilityScanner:
         logger.info(f"   如果显示的代币数<{subscription_count}，说明部分市场暂时无交易活动")
         logger.info(f"📊 将在运行5分钟后生成详细的订阅统计报告")
         logger.info("=" * 80)
+        
+        # 🔥 更新UI的订阅统计信息（让用户实时看到订阅状态）
+        if self.ui:
+            self.ui.update_subscription_stats(
+                subscribed=subscription_count,
+                failed=failed_count,
+                received=0  # 初始时还没有收到数据
+            )
 
     async def _on_ticker_update(self, symbol: str, ticker):
         """
@@ -559,6 +674,9 @@ class GridVolatilityScanner:
                 return
 
             current_price = Decimal(str(ticker.last))
+            
+            # 🔥 更新最后数据接收时间（用于连接监控）
+            self._last_data_time[symbol] = datetime.now()
             
             # 🔥 记录收到价格推送的代币（用于统计）
             if symbol not in self._received_ticker_symbols:
@@ -700,6 +818,32 @@ class GridVolatilityScanner:
         logger.info(f"❌ 订阅失败: {failed_count}")
         logger.info(f"📈 收到价格推送: {received_count} ({received_count/subscribed_count*100 if subscribed_count > 0 else 0:.1f}%)")
         logger.info(f"🚫 订阅成功但无数据: {len(no_data_symbols)} ({len(no_data_symbols)/subscribed_count*100 if subscribed_count > 0 else 0:.1f}%)")
+        
+        # 🔥 Ticker接收统计（用于判断WebSocket回调是否正常工作）
+        logger.info("=" * 80)
+        logger.info("📡 WebSocket Ticker接收统计：")
+        logger.info(f"  总接收数: {self._ticker_received_count} 个ticker推送")
+        logger.info(f"  匹配成功: {self._ticker_matched_count} 个")
+        logger.info(f"  未匹配: {len(self._ticker_unmatched_symbols)} 个不同的symbol")
+        if self._ticker_unmatched_symbols:
+            unmatched_list = sorted(list(self._ticker_unmatched_symbols))[:10]
+            logger.info(f"  未匹配示例（前10个）: {', '.join(unmatched_list)}")
+        
+        # 🔥 关键诊断信息
+        if self._ticker_received_count == 0:
+            logger.error("❌ 警告: 没有收到任何ticker推送！")
+            logger.error("   可能原因：")
+            logger.error("   1. WebSocket连接未建立")
+            logger.error("   2. 回调函数未被触发")
+            logger.error("   3. Lighter交易所数据推送异常")
+        elif self._ticker_matched_count == 0:
+            logger.error("❌ 警告: 收到ticker推送但全部未匹配！")
+            logger.error("   可能原因：")
+            logger.error("   1. Symbol映射表配置错误")
+            logger.error("   2. 订阅的symbol格式与ticker返回格式不一致")
+        elif self._ticker_matched_count < received_count:
+            logger.warning(f"⚠️  注意: 匹配成功的ticker({self._ticker_matched_count})少于实际收到数据的代币({received_count})")
+        
         logger.info("=" * 80)
         
         # 写入详细报告到日志文件
@@ -810,6 +954,8 @@ class GridVolatilityScanner:
                 results = []
                 min_cycles = self.scanner_config.get(
                     'min_cycles_to_display', 0)
+                
+                # 1️⃣ 添加有交易活动的代币（已创建虚拟网格的）
                 for grid in self.virtual_grids.values():
                     # 🔥 根据配置决定是否显示：
                     # - min_cycles_to_display=0: 显示所有虚拟网格（包括循环为0的）
@@ -821,6 +967,16 @@ class GridVolatilityScanner:
                     if min_cycles == 0 or grid.complete_cycles >= min_cycles or is_btc:
                         result = SimulationResult.from_virtual_grid(grid)
                         results.append(result)
+                
+                # 2️⃣ 添加订阅成功但无交易活动的代币（占位符）
+                subscribed_symbols = set(self._subscribed_symbols_list)
+                received_symbols = set(self._received_ticker_symbols)
+                no_activity_symbols = subscribed_symbols - received_symbols
+                
+                for symbol in sorted(no_activity_symbols):
+                    # 🔥 创建"无交易活动"的占位符结果
+                    placeholder = SimulationResult.create_no_activity_placeholder(symbol)
+                    results.append(placeholder)
 
                 # 更新UI
                 if self.ui:
@@ -829,6 +985,12 @@ class GridVolatilityScanner:
                         total_markets=len(self.virtual_grids),
                         active_markets=len(
                             [g for g in self.virtual_grids.values() if g.complete_cycles > 0])
+                    )
+                    # 🔥 更新订阅统计（实时显示收到数据的代币数量）
+                    self.ui.update_subscription_stats(
+                        subscribed=self._subscribed_symbols_count,
+                        failed=len(self._failed_subscribe_symbols),
+                        received=len(self._received_ticker_symbols)
                     )
                 
                 # 🔥 在运行5分钟后显示订阅统计（只显示一次）
@@ -864,6 +1026,9 @@ class GridVolatilityScanner:
         try:
             # 启动UI更新任务
             ui_update_task = asyncio.create_task(self._update_ui_loop())
+            
+            # 🔥 启动WebSocket连接监控任务
+            connection_monitor_task = asyncio.create_task(self._monitor_websocket_connection())
 
             # 运行UI（阻塞直到扫描结束或用户中断）
             if self.ui:
@@ -884,10 +1049,16 @@ class GridVolatilityScanner:
             # 停止任务
             self._running = False
             ui_update_task.cancel()
+            connection_monitor_task.cancel()  # 🔥 取消连接监控任务
 
             # 等待任务完成
             try:
                 await ui_update_task
+            except asyncio.CancelledError:
+                pass
+            
+            try:
+                await connection_monitor_task
             except asyncio.CancelledError:
                 pass
 
@@ -985,3 +1156,313 @@ class GridVolatilityScanner:
             )
 
         print("="*80)
+
+    # === 🔥 WebSocket连接监控相关方法（新增）===
+    
+    async def _monitor_websocket_connection(self):
+        """
+        监控WebSocket连接健康状态
+        
+        定期检查数据更新情况：
+        - 启动后120秒内不检查（给足够时间接收首次数据）
+        - 如果数据超过阈值时间未更新，触发重连
+        - 防止并发重连
+        """
+        logger.info(
+            f"🔄 WebSocket连接监控循环已启动 "
+            f"(检查间隔: {self._connection_check_interval}秒, "
+            f"启动缓冲期: {self._startup_grace_period}秒, "
+            f"超时阈值: {self._data_timeout_seconds}秒)"
+        )
+        
+        while self._running:
+            try:
+                current_time = datetime.now()
+                
+                # 启动缓冲期检查
+                elapsed_since_start = (current_time - self._scan_start_time).total_seconds()
+                if elapsed_since_start < self._startup_grace_period:
+                    remaining = self._startup_grace_period - elapsed_since_start
+                    # 只在缓冲期前半段输出
+                    if remaining > 60 and remaining % 60 < self._connection_check_interval:
+                        logger.info(
+                            f"⏳ 连接监控启动缓冲期中，剩余 {remaining:.0f} 秒后开始检查"
+                        )
+                    await asyncio.sleep(self._connection_check_interval)
+                    continue
+                
+                # 🔥 改进：区分活跃代币和不活跃代币，避免误判
+                
+                # 1. 识别活跃代币（最近有交易活动的）
+                active_symbols = []
+                inactive_symbols = []
+                
+                for symbol, grid in self.virtual_grids.items():
+                    # 如果有任何交易穿越，说明是活跃代币
+                    if grid.total_crosses > 0:
+                        active_symbols.append(symbol)
+                    else:
+                        inactive_symbols.append(symbol)
+                
+                # 2. 分别检查活跃代币和全部代币的超时情况
+                stale_active = []
+                stale_inactive = []
+                
+                for symbol in active_symbols:
+                    if self._is_data_stale(symbol, current_time):
+                        stale_active.append(symbol)
+                
+                for symbol in inactive_symbols:
+                    if self._is_data_stale(symbol, current_time):
+                        stale_inactive.append(symbol)
+                
+                # 3. 计算比例
+                total_symbols = len(self.virtual_grids)
+                active_count = len(active_symbols)
+                inactive_count = len(inactive_symbols)
+                
+                active_stale_ratio = len(stale_active) / active_count if active_count > 0 else 0
+                total_stale_ratio = (len(stale_active) + len(stale_inactive)) / total_symbols if total_symbols > 0 else 0
+                
+                # 4. 🔥 智能判断：优先关注活跃代币的超时情况
+                should_reconnect = False
+                reconnect_reason = ""
+                
+                if active_count >= 10:
+                    # 如果有足够多的活跃代币（>=10个）
+                    # 判断依据：如果超过60%的活跃代币超时，说明大概率是连接问题
+                    if active_stale_ratio > 0.6:
+                        should_reconnect = True
+                        reconnect_reason = f"{len(stale_active)}/{active_count}个活跃代币超时 ({active_stale_ratio*100:.0f}%)"
+                elif active_count > 0:
+                    # 如果活跃代币较少（<10个），要求稍高的超时比例
+                    if active_stale_ratio > 0.7:
+                        should_reconnect = True
+                        reconnect_reason = f"{len(stale_active)}/{active_count}个活跃代币超时 ({active_stale_ratio*100:.0f}%)"
+                else:
+                    # 如果没有活跃代币，检查全部代币
+                    # 要求80%以上超时才重连（避免误判无交易活动）
+                    if total_stale_ratio > 0.8:
+                        should_reconnect = True
+                        reconnect_reason = f"{len(stale_active) + len(stale_inactive)}/{total_symbols}个代币超时 ({total_stale_ratio*100:.0f}%，无活跃代币)"
+                
+                # 5. 触发重连
+                if should_reconnect and not self._is_reconnecting:
+                    logger.warning(
+                        f"⚠️  检测到连接异常: {reconnect_reason}"
+                    )
+                    logger.info(
+                        f"   活跃代币: {active_count}个 (超时{len(stale_active)}个) | "
+                        f"不活跃代币: {inactive_count}个 (超时{len(stale_inactive)}个)"
+                    )
+                    
+                    # 🔥 无限重连：直接触发重连，不检查次数限制
+                    asyncio.create_task(self._reconnect_websocket())
+                
+                # 定期输出健康检查日志（每5分钟一次）
+                time_since_last_log = (current_time - self._last_health_check_log).total_seconds()
+                if time_since_last_log >= self._health_check_log_interval:
+                    self._log_connection_health(current_time)
+                    self._last_health_check_log = current_time
+                
+                # 等待下次检查
+                await asyncio.sleep(self._connection_check_interval)
+                
+            except asyncio.CancelledError:
+                logger.info("连接监控循环已取消")
+                break
+            except Exception as e:
+                logger.error(f"❌ 连接监控循环异常: {e}", exc_info=True)
+                await asyncio.sleep(10)  # 出错后等待10秒再继续
+    
+    def _is_data_stale(self, symbol: str, current_time: datetime) -> bool:
+        """
+        检查指定符号的数据是否过期
+        
+        Args:
+            symbol: 交易对符号
+            current_time: 当前时间
+            
+        Returns:
+            bool: 数据是否过期
+        """
+        last_update = self._last_data_time.get(symbol)
+        
+        # 如果从未收到数据，认为是过期的
+        if not last_update:
+            return True
+        
+        # 计算距离上次更新的时间
+        elapsed = (current_time - last_update).total_seconds()
+        
+        # 超过阈值认为过期
+        return elapsed > self._data_timeout_seconds
+    
+    def _log_connection_health(self, current_time: datetime):
+        """
+        输出连接健康状态日志
+        
+        定期输出数据更新情况，帮助用户了解系统状态
+        
+        Args:
+            current_time: 当前时间
+        """
+        logger.info("=" * 60)
+        logger.info("📊 WebSocket 连接健康检查")
+        
+        # 🔥 区分活跃代币和不活跃代币
+        active_symbols = []
+        inactive_symbols = []
+        
+        for symbol, grid in self.virtual_grids.items():
+            if grid.total_crosses > 0:
+                active_symbols.append(symbol)
+            else:
+                inactive_symbols.append(symbol)
+        
+        # 统计活跃代币的数据状态
+        active_stale = 0
+        active_min_elapsed = None
+        active_max_elapsed = None
+        
+        for symbol in active_symbols:
+            last_update = self._last_data_time.get(symbol)
+            
+            if not last_update:
+                active_stale += 1
+                continue
+            
+            elapsed = (current_time - last_update).total_seconds()
+            
+            if self._is_data_stale(symbol, current_time):
+                active_stale += 1
+            
+            # 更新最小/最大时间差
+            if active_min_elapsed is None or elapsed < active_min_elapsed:
+                active_min_elapsed = elapsed
+            if active_max_elapsed is None or elapsed > active_max_elapsed:
+                active_max_elapsed = elapsed
+        
+        # 统计不活跃代币的数据状态
+        inactive_stale = 0
+        for symbol in inactive_symbols:
+            if self._is_data_stale(symbol, current_time):
+                inactive_stale += 1
+        
+        # 输出总体状态
+        active_healthy = len(active_symbols) - active_stale
+        inactive_healthy = len(inactive_symbols) - inactive_stale
+        
+        # 判断总体状态（与重连阈值保持一致）
+        if len(active_symbols) > 0:
+            active_health_ratio = active_healthy / len(active_symbols)
+            if active_health_ratio >= 0.85:
+                status = "✅ 正常"
+            elif active_health_ratio >= 0.6:  # 60%以下会触发重连
+                status = "⚠️  轻微异常"
+            else:
+                status = "❌ 严重异常（即将重连）"
+        else:
+            status = "🔶 无活跃代币"
+        
+        logger.info(f"  交易所: Lighter | 状态: {status}")
+        logger.info(
+            f"  活跃代币: {active_healthy}/{len(active_symbols)} 健康 | "
+            f"不活跃代币: {inactive_healthy}/{len(inactive_symbols)} 健康"
+        )
+        
+        if active_min_elapsed is not None and active_max_elapsed is not None:
+            logger.info(
+                f"  活跃代币数据时效: {active_min_elapsed:.0f}s~{active_max_elapsed:.0f}s"
+            )
+        elif len(active_symbols) > 0:
+            logger.info("  活跃代币数据时效: 无数据")
+        
+        logger.info(f"  重连次数: {self._reconnect_count} (无限重连)")
+        logger.info("=" * 60)
+    
+    async def _reconnect_websocket(self):
+        """
+        重连WebSocket（带指数退避策略，无限重连）
+        
+        断开并重新连接交易所WebSocket，重新订阅所有代币
+        
+        重连策略：
+        - 使用指数退避：2s → 4s → 8s → 16s → 32s → 60s（最大，之后保持60秒）
+        - 无限重连：不限制重连次数，直到连接成功
+        """
+        if self._is_reconnecting:
+            logger.warning("⏳ 已有重连任务正在执行，跳过本次重连")
+            return
+        
+        self._is_reconnecting = True
+        self._reconnect_count += 1
+        self._total_reconnect_count += 1  # 🔥 累计总重连次数
+        
+        # 🔥 更新UI显示重连次数
+        if self.ui:
+            self.ui.update_reconnect_count(self._total_reconnect_count)
+        
+        # 🔥 计算指数退避延迟
+        # 策略：2^attempt，但限制最大延迟
+        backoff_delay = min(
+            self._reconnect_base_delay * (2 ** (self._reconnect_count - 1)),
+            self._reconnect_max_delay
+        )
+        
+        try:
+            logger.warning(
+                f"🔄 开始重连 WebSocket (第 {self._reconnect_count} 次，"
+                f"等待 {backoff_delay:.1f}秒后重试，无限重连)..."
+            )
+            
+            # 🔥 指数退避：等待一段时间再重连
+            await asyncio.sleep(backoff_delay)
+            
+            # 1. 断开现有连接
+            try:
+                await self.adapter.disconnect()
+                logger.info("✅ 已断开WebSocket连接")
+            except Exception as e:
+                logger.error(f"断开连接失败: {e}")
+            
+            # 2. 重新连接
+            try:
+                await self.adapter.connect()
+                logger.info("✅ WebSocket重新连接成功")
+            except Exception as e:
+                logger.error(f"❌ 重新连接失败: {e}")
+                self._is_reconnecting = False
+                return
+            
+            # 3. 重新订阅所有代币
+            try:
+                symbols_to_resubscribe = list(self.virtual_grids.keys())
+                logger.info(f"📡 重新订阅 {len(symbols_to_resubscribe)} 个代币...")
+                
+                # 将字符串列表转换为字典列表格式（_create_virtual_grids期望的格式）
+                markets_to_resubscribe = [{'symbol': symbol} for symbol in symbols_to_resubscribe]
+                
+                # 重新创建虚拟网格（这会重新订阅）
+                await self._create_virtual_grids(markets_to_resubscribe)
+                
+                logger.info("✅ 重新订阅完成")
+                
+                # 清除旧的数据时间戳
+                self._last_data_time.clear()
+                
+                # 🔥 重连成功，重置重连计数
+                successful_attempt = self._reconnect_count
+                self._reconnect_count = 0
+                
+                logger.info(f"✅ WebSocket重连完成 (第 {successful_attempt} 次尝试成功)")
+                
+            except Exception as e:
+                logger.error(f"❌ 重新订阅失败: {e}")
+                raise  # 重新订阅失败，继续重试
+                
+        except Exception as e:
+            logger.error(f"❌ WebSocket重连失败: {e}", exc_info=True)
+            # 不重置 _is_reconnecting，让调用者决定是否继续重试
+        finally:
+            self._is_reconnecting = False

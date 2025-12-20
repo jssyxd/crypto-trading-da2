@@ -20,9 +20,18 @@ api_config:
   # ACCOUNT_INDEX: 账户索引
   # API_KEY_INDEX: API Key索引
   auth:
-    api_key_private_key: "111111111111111111111111"  # 需要配置
-    account_index: 11111          # 账户索引 (十进制)
-    api_key_index: 2             # API Key索引
+    # 🔥 是否启用API密钥和账户订阅
+    # 如果设置为 false，将只订阅公共数据（market_stats和order_book），不订阅账户数据
+    # 设置为 true 时，需要配置下面的 api_key_private_key、account_index 和 api_key_index
+    enabled: true
+    
+    # 📌 密钥已迁移到环境变量（.env 文件）：
+    #    LIGHTER_API_KEY_PRIVATE_KEY - API Key 私钥
+    #    LIGHTER_ACCOUNT_INDEX - 账户索引
+    #    LIGHTER_API_KEY_INDEX - API Key 索引
+    api_key_private_key: ""  # 留空，使用环境变量 LIGHTER_API_KEY_PRIVATE_KEY
+    account_index: 0         # 留空，使用环境变量 LIGHTER_ACCOUNT_INDEX
+    api_key_index: 0         # 留空，使用环境变量 LIGHTER_API_KEY_INDEX
   
   # SDK安装说明
   sdk_install_command: "pip install git+https://github.com/elliottech/lighter-python.git"
@@ -44,8 +53,8 @@ subscription_mode:
     data_types:
       ticker: true       # 订阅ticker数据
       orderbook: true    # 订阅订单簿
-      trades: false      # 订阅成交数据（按需开启）
-      user_data: false   # 订阅用户数据（需要配置API密钥）
+      trades: true      # 订阅成交数据（按需开启）
+      user_data: true   # 订阅用户数据（需要配置API密钥）
   
   # 自动发现模式配置
   discovery:
@@ -58,11 +67,9 @@ subscription_mode:
         currencies: ["USD", "USDT", "USDC"]
 
 # 符号映射配置
-symbol_mapping:
-  # 内部符号 -> Lighter符号
-  "BTCUSD": "BTC-USD"
-  "ETHUSD": "ETH-USD"
-  "SOLUSD": "SOL-USD"
+# ⚠️  已禁用：Lighter API返回的符号就是 BTCUSD、ETHUSD 等（无分隔符）
+# 不需要额外映射，直接使用 symbol_converter 的输出
+symbol_mapping: {}
 
 # 速率限制配置
 rate_limits:

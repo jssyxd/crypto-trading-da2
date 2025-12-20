@@ -92,9 +92,19 @@ class GridEngineImpl(IGridEngine):
         self._last_position_warning_time: float = 0  # 上次警告时间
         self._position_warning_interval: float = 60  # 警告间隔（秒）
 
+        # 🔥 价格缓存过期警告频率控制
+        self._last_price_warning_time: float = 0  # 上次价格警告时间
+        self._price_warning_interval: float = 60  # 价格警告间隔（秒）
+
         # 🔥 Lighter交易所：全局下单锁（确保所有下单操作串行）
         # 之前只在 grid_coordinator 的反手单中使用锁，但止盈订单、健康检查补单等也需要串行
         self._lighter_order_lock = asyncio.Lock()  # 全局下单锁
+
+        # 🔥 REST价格更新锁和时间戳（避免并发请求API）
+        self._rest_price_update_lock = asyncio.Lock()  # REST更新锁
+        self._last_rest_price_update_time: float = 0  # 上次REST更新时间
+        self._rest_price_update_interval: float = 30  # REST更新间隔（秒）
+        self._rest_price_updater_task = None  # 后台更新任务
 
         # 🔥 新方案：通过 client_id 映射原始订单（替代价格验证方案）
         # 存储：client_id → 原始 GridOrder 对象
@@ -117,6 +127,9 @@ class GridEngineImpl(IGridEngine):
             config: 网格配置
         """
         self.config = config
+        
+        # 🔥 设置运行状态（确保后台任务能正常运行）
+        self._running = True
 
         # 确保交易所连接
         if not self.exchange.is_connected():
@@ -152,6 +165,13 @@ class GridEngineImpl(IGridEngine):
 
         # 🔥 启动智能价格监控：WebSocket优先，REST备用
         await self._start_price_monitor()
+
+        # 🔥 启动后台REST价格更新任务（30秒间隔兜底）
+        self._start_rest_price_updater()
+
+        # 🔥 启动时立即获取一次价格（填充缓存，避免初始化失败）
+        self.logger.info("📊 正在获取初始价格...")
+        await self._update_price_from_rest()
 
         # 🔥 设置预期订单总数（网格数量）
         self._expected_total_orders = config.grid_count
@@ -646,67 +666,55 @@ class GridEngineImpl(IGridEngine):
 
     async def get_current_price(self) -> Decimal:
         """
-        获取当前市场价格
+        获取当前市场价格（从缓存读取）
 
-        优先使用WebSocket缓存的价格，如果超时则使用REST API
-
-        🔥 新增：价格获取失败检测机制
-        - 连续失败3次 → 判定为网络故障，暂停系统
-        - 连续成功3次 → 确认网络恢复
-        - 与REST持仓查询失败机制协同工作
+        🔥 新架构：统一缓存机制
+        - 所有调用都从缓存读取，不主动请求API
+        - WS推送实时更新缓存
+        - 后台REST任务定期更新缓存（30秒间隔兜底）
+        - 并发安全，避免频繁API请求触发429限流
 
         Returns:
-            当前价格
+            当前价格（从缓存）
+        
+        Raises:
+            ValueError: 缓存为空且无兜底价格时
         """
         current_time = time.time()
 
-        try:
-            # 🔥 优先使用WebSocket缓存的价格
-            if self._current_price is not None:
-                price_age = current_time - self._last_price_update_time
-                # 如果价格在5秒内更新过，直接返回缓存
-                if price_age < 5:
-                    # 🆕 价格获取成功，处理恢复逻辑
-                    await self._handle_price_success()
-                    return self._current_price
-
-            # 🔥 WebSocket价格过期或不可用，使用REST API
-            ticker = await self.exchange.get_ticker(self.config.symbol)
-
-            # 优先使用last，其次bid/ask均价
-            if ticker.last is not None:
-                price = ticker.last
-            elif ticker.bid is not None and ticker.ask is not None:
-                price = (ticker.bid + ticker.ask) / Decimal('2')
-            elif ticker.bid is not None:
-                price = ticker.bid
-            elif ticker.ask is not None:
-                price = ticker.ask
-            else:
-                raise ValueError("Ticker数据不包含有效价格信息")
-
-            # 更新缓存
-            self._current_price = price
-            self._last_price_update_time = current_time
-
-            # 🆕 价格获取成功，处理恢复逻辑
-            await self._handle_price_success()
-
-            return price
-
-        except Exception as e:
-            self.logger.error(f"获取当前价格失败: {e}")
-
-            # 🆕 价格获取失败，处理故障逻辑
-            await self._handle_price_failure()
-
-            # 如果有缓存价格，即使过期也返回
-            if self._current_price is not None:
-                price_age = current_time - self._last_price_update_time
-                self.logger.warning(
-                    f"使用缓存价格（{price_age:.0f}秒前）")
+        # 🔥 纯缓存读取：如果缓存有效，直接返回
+        if self._current_price is not None:
+            price_age = current_time - self._last_price_update_time
+            # 如果价格在60秒内更新过，认为有效
+            if price_age < 60:
+                await self._handle_price_success()
                 return self._current_price
-            raise
+            
+            # 价格超过60秒未更新，记录警告但仍返回（避免中断交易）
+            # 🔥 警告频率控制：避免刷屏（每60秒最多1次）
+            if current_time - self._last_price_warning_time >= self._price_warning_interval:
+                self.logger.warning(
+                    f"⚠️ 价格缓存已过期 {price_age:.0f}秒，仍使用旧价格。"
+                    f"检查WS连接和REST更新任务是否正常。"
+                )
+                self._last_price_warning_time = current_time
+            return self._current_price
+
+        # 🔥 缓存为空：使用配置区间中间价作为兜底（首次启动时）
+        if self.config and self.config.lower_price and self.config.upper_price:
+            fallback_price = (self.config.lower_price + self.config.upper_price) / Decimal('2')
+            self.logger.warning(
+                f"⚠️ 价格缓存为空，使用配置区间中间价作为兜底: {fallback_price}"
+            )
+            self._current_price = fallback_price
+            self._last_price_update_time = current_time
+            return fallback_price
+
+        # 🔥 无任何可用价格
+        raise ValueError(
+            "价格缓存为空且无配置区间，请检查WS连接和REST更新任务。"
+            "系统启动时应等待WS首次价格推送或REST更新完成。"
+        )
 
     async def _handle_price_success(self):
         """
@@ -1539,6 +1547,14 @@ class GridEngineImpl(IGridEngine):
             except asyncio.CancelledError:
                 self.logger.info("健康检查任务已取消")
 
+        # 🔥 取消REST价格更新任务
+        if self._rest_price_updater_task and not self._rest_price_updater_task.done():
+            self._rest_price_updater_task.cancel()
+            try:
+                await self._rest_price_updater_task
+            except asyncio.CancelledError:
+                self.logger.info("REST价格更新任务已取消")
+
         # 取消所有挂单
         await self.cancel_all_orders()
 
@@ -1599,6 +1615,145 @@ class GridEngineImpl(IGridEngine):
 
         except Exception as e:
             self.logger.error(f"处理价格更新失败: {e}", exc_info=True)
+
+    async def _update_price_from_rest(self) -> bool:
+        """
+        立即通过REST更新价格缓存（用于启动时初始化）
+
+        🔥 启动时调用：确保价格缓存有初始值
+        - 只在启动时调用一次
+        - 有锁保护，避免并发请求
+        - 失败返回False，成功返回True
+
+        Returns:
+            bool: 更新是否成功
+        """
+        async with self._rest_price_update_lock:
+            try:
+                current_time = time.time()
+                
+                # 尝试通过ticker获取价格
+                ticker = await self.exchange.get_ticker(self.config.symbol)
+                price = None
+                
+                if ticker is not None:
+                    if getattr(ticker, "last", None) is not None:
+                        price = ticker.last
+                    elif getattr(ticker, "bid", None) is not None and getattr(ticker, "ask", None) is not None:
+                        price = (ticker.bid + ticker.ask) / Decimal('2')
+                    elif getattr(ticker, "bid", None) is not None:
+                        price = ticker.bid
+                    elif getattr(ticker, "ask", None) is not None:
+                        price = ticker.ask
+                
+                # 如果ticker失败，尝试orderbook
+                if price is None:
+                    try:
+                        ob = await self.exchange.get_orderbook(self.config.symbol, limit=1)
+                        if ob and getattr(ob, "bids", None) and getattr(ob, "asks", None):
+                            best_bid = Decimal(str(ob.bids[0][0]))
+                            best_ask = Decimal(str(ob.asks[0][0]))
+                            price = (best_bid + best_ask) / Decimal('2')
+                    except Exception:
+                        pass  # 静默失败
+                
+                # 更新缓存
+                if price is not None:
+                    self._current_price = price
+                    self._last_price_update_time = current_time
+                    self._last_rest_price_update_time = current_time
+                    self.logger.info(f"✅ 启动价格初始化成功: {price}")
+                    return True
+                else:
+                    self.logger.warning("⚠️ 启动价格初始化失败：无有效价格")
+                    return False
+            
+            except Exception as e:
+                self.logger.error(f"启动价格初始化异常: {e}")
+                return False
+
+    def _start_rest_price_updater(self):
+        """
+        启动后台REST价格更新任务
+
+        🔥 新增：定期通过REST API更新价格缓存（30秒间隔）
+        - 作为WS推送的兜底机制
+        - 避免并发调用，统一由后台任务更新
+        - 限流保护，30秒最小间隔
+        """
+        if self._rest_price_updater_task is None or self._rest_price_updater_task.done():
+            self._rest_price_updater_task = asyncio.create_task(
+                self._rest_price_update_loop()
+            )
+            self.logger.info("✅ 后台REST价格更新任务已启动（30秒间隔）")
+
+    async def _rest_price_update_loop(self):
+        """
+        REST价格更新循环
+
+        🔥 定期通过REST更新价格缓存
+        - 30秒间隔（避免触发429限流）
+        - 有锁保护，避免并发请求
+        - 静默更新，失败不中断系统
+        """
+        while self._running:
+            try:
+                await asyncio.sleep(self._rest_price_update_interval)
+                
+                # 使用锁避免并发REST请求
+                async with self._rest_price_update_lock:
+                    current_time = time.time()
+                    
+                    # 二次检查：确保距离上次更新已超过间隔（避免其他地方触发）
+                    if current_time - self._last_rest_price_update_time < self._rest_price_update_interval:
+                        continue
+                    
+                    try:
+                        # 尝试通过ticker获取价格
+                        ticker = await self.exchange.get_ticker(self.config.symbol)
+                        price = None
+                        
+                        if ticker is not None:
+                            if getattr(ticker, "last", None) is not None:
+                                price = ticker.last
+                            elif getattr(ticker, "bid", None) is not None and getattr(ticker, "ask", None) is not None:
+                                price = (ticker.bid + ticker.ask) / Decimal('2')
+                            elif getattr(ticker, "bid", None) is not None:
+                                price = ticker.bid
+                            elif getattr(ticker, "ask", None) is not None:
+                                price = ticker.ask
+                        
+                        # 如果ticker失败，尝试orderbook
+                        if price is None:
+                            try:
+                                ob = await self.exchange.get_orderbook(self.config.symbol, limit=1)
+                                if ob and getattr(ob, "bids", None) and getattr(ob, "asks", None):
+                                    best_bid = Decimal(str(ob.bids[0][0]))
+                                    best_ask = Decimal(str(ob.asks[0][0]))
+                                    price = (best_bid + best_ask) / Decimal('2')
+                            except Exception:
+                                pass  # 静默失败
+                        
+                        # 更新缓存
+                        if price is not None:
+                            self._current_price = price
+                            self._last_price_update_time = current_time
+                            self._last_rest_price_update_time = current_time
+                            self.logger.debug(f"🔄 REST价格更新成功: {price}")
+                        else:
+                            self.logger.warning("⚠️ REST价格更新失败：无有效价格")
+                    
+                    except Exception as e:
+                        # REST失败不中断系统，静默记录
+                        self.logger.debug(f"REST价格更新失败: {e}")
+                        self._last_rest_price_update_time = current_time  # 记录尝试时间，避免频繁重试
+            
+            except asyncio.CancelledError:
+                self.logger.info("REST价格更新任务已取消")
+                break
+            except Exception as e:
+                self.logger.error(f"REST价格更新循环异常: {e}", exc_info=True)
+                await asyncio.sleep(5)  # 异常后短暂等待再继续
 
     def get_price_monitor_mode(self) -> str:
         """

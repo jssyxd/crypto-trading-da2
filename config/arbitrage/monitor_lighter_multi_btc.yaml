@@ -1,0 +1,34 @@
+# ============================================================================
+# Lighter中心多交易所 BTC 监控配置（分段网格 v2）
+# 运行方式（监控模式）：
+#   python main_unified.py \
+#       --config config/arbitrage/arbitrage_segmented.yaml \
+#       --monitor-config config/arbitrage/monitor_lighter_multi_btc.yaml
+# ============================================================================
+
+exchanges:
+  - lighter
+  - backpack
+  - edgex
+  - paradex
+
+symbols:
+  - BTC-USDC-PERP
+
+thresholds:
+  min_spread_pct: 0.05
+  min_funding_rate_diff: 0.0
+
+websocket:
+  ping_interval: 30
+  reconnect_delay: 5
+  max_reconnect_attempts: 50000
+
+performance:
+  analysis_interval_ms: 50
+  ui_refresh_interval_ms: 1000
+
+health_check:
+  interval: 10
+  data_timeout: 30
+

@@ -1,0 +1,20 @@
+# 分段模式专用的交易对启用/禁用配置
+# 同时只使用 enabled 或 disabled 其中之一；若 enabled 非空则只监控该列表
+
+enabled_symbols:
+  - BTC-USDC-PERP
+
+# disabled_symbols:
+#   - BTC-USDC-PERP
+#   - ETH-USDC-PERP
+
+enabled_exchanges:
+  - lighter
+  - paradex
+
+# disabled_exchanges:
+#   - edgex
+#   - backpack
+
+allow_single_exchange: true
+

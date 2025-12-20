@@ -48,6 +48,9 @@ class SimulationResult:
     rating: str = ""                         # 评级（S/A/B/C/D）
     score: float = 0.0                       # 综合评分（0-100）
     s_rating_duration_str: str = "--"        # S级持续时间（格式: D/H/M）
+    
+    # 🔥 交易活动标志（新增）
+    has_trading_activity: bool = True        # 是否有交易活动
 
     def calculate_rating(self) -> str:
         """
@@ -160,6 +163,45 @@ class SimulationResult:
         # 🔥 更新VirtualGrid的评级并获取S级持续时间
         grid.update_rating(result.rating)
         result.s_rating_duration_str = grid.get_s_rating_duration_str()
+
+        return result
+    
+    @classmethod
+    def create_no_activity_placeholder(cls, symbol: str) -> 'SimulationResult':
+        """
+        创建"无交易活动"的占位符结果
+        
+        用于显示已订阅但未收到数据的代币
+        
+        Args:
+            symbol: 交易对符号
+            
+        Returns:
+            SimulationResult对象（标记为无交易活动）
+        """
+        result = cls(
+            symbol=symbol,
+            current_price=Decimal('0'),
+            grid_width_percent=Decimal('0'),
+            grid_interval_percent=Decimal('0'),
+            grid_count=0,
+            price_range='--',
+            running_seconds=0,
+            total_crosses=0,
+            buy_crosses=0,
+            sell_crosses=0,
+            complete_cycles=0,
+            cycles_per_hour=Decimal('0'),
+            avg_cycles_per_5min=Decimal('0'),
+            recent_5min_cycles=0,
+            estimated_apr=Decimal('0'),
+            volume_24h_usdc=Decimal('0'),
+            price_change_24h_percent=Decimal('0'),
+            rating="⏸️ 无活动",  # 特殊评级标识
+            score=0.0,
+            s_rating_duration_str="--",
+            has_trading_activity=False  # 🔥 标记为无交易活动
+        )
 
         return result
 

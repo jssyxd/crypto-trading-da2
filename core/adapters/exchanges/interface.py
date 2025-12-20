@@ -50,6 +50,7 @@ class ExchangeConfig:
     api_key: str                            # API密钥
     api_secret: str                         # API密钥
     api_passphrase: Optional[str] = None    # API密码短语（部分交易所需要）
+    private_key: Optional[str] = None       # 私钥（用于ED25519签名，如Backpack）
     wallet_address: Optional[str] = None    # 钱包地址（如Hyperliquid）
 
     # 网络配置

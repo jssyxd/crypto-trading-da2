@@ -58,7 +58,7 @@ backpack:
       # 要订阅的数据类型
       data_types:
         ticker: true         # 🔥 订阅行情数据获取价格
-        orderbook: false     # 🔥 不订阅订单簿数据
+        orderbook: true      # 🔥 ✅ 启用订单簿数据订阅
         trades: false        # 成交数据
         user_data: false     # 用户数据
         
@@ -145,10 +145,13 @@ backpack:
     timeout: 30
     
   # 认证配置
+  # 📌 密钥已迁移到环境变量（.env 文件）：
+  #    BACKPACK_API_KEY - API Key (Base58格式)
+  #    BACKPACK_PRIVATE_KEY - ED25519 私钥 (Base58格式)
   authentication:
     method: "ed25519"
-    api_key: "Aq+1111111111111="           # 在运行时设置
-    private_key: "eC/1111111111111="       # 私钥 (敏感信息)
+    api_key: ""           # 留空，使用环境变量 BACKPACK_API_KEY
+    private_key: ""       # 留空，使用环境变量 BACKPACK_PRIVATE_KEY
     
   # 频率限制
   rate_limits:

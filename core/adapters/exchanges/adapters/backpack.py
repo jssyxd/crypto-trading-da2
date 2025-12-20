@@ -12,6 +12,7 @@ import time
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Callable
 from decimal import Decimal
+import copy
 
 from ....logging import get_logger
 
@@ -47,6 +48,28 @@ class BackpackAdapter(ExchangeAdapter):
         self._rest._position_callbacks = shared_position_callbacks
         self._websocket._position_callbacks = shared_position_callbacks
         self._position_callbacks = shared_position_callbacks
+        
+        # 🔥 设置WebSocket回调：收到持仓或订单更新时自动刷新余额
+        self._setup_balance_auto_refresh()
+        
+        # 🔥 初始化余额缓存
+        if not hasattr(self._rest, '_balance_cache'):
+            self._rest._balance_cache = []
+            self._rest._balance_cache_time = 0
+
+        # 订单缓存与终态缓存（避免重复REST查询）
+        self._order_cache: Dict[str, OrderData] = {}
+        self._terminal_order_cache: Dict[str, Dict[str, Any]] = {}
+        self._terminal_cache_ttl: float = 10.0  # 秒
+
+        if hasattr(self._websocket, "_order_callbacks"):
+            self._websocket._order_callbacks.append(self._handle_internal_order_update)
+            self.logger.info(
+                f"✅ [Backpack] 已注册订单缓存回调，"
+                f"当前回调数量: {len(self._websocket._order_callbacks)}"
+            )
+        else:
+            self.logger.warning("⚠️ [Backpack] WebSocket没有 _order_callbacks 属性，无法注册缓存回调")
 
         # 设置基础URL
         self.base_url = getattr(
@@ -82,8 +105,8 @@ class BackpackAdapter(ExchangeAdapter):
             )
 
             if self.logger:
-                self.logger.info(
-                    f"✅ Backpack订阅管理器初始化成功，模式: {config_dict.get('subscription_mode', {}).get('mode', 'unknown')}")
+                mode = config_dict.get('subscription_mode', {}).get('mode', 'unknown')
+                self.logger.info(f"[Backpack] 订阅管理器: 初始化成功 (模式: {mode})")
 
         except Exception as e:
             if self.logger:
@@ -129,7 +152,7 @@ class BackpackAdapter(ExchangeAdapter):
             backpack_config['exchange_id'] = 'backpack'
 
             if self.logger:
-                self.logger.info(f"成功加载Backpack配置文件: {config_path}")
+                self.logger.debug(f"[Backpack] 配置文件: 已加载 ({config_path.name})")
 
             return backpack_config
 
@@ -160,6 +183,25 @@ class BackpackAdapter(ExchangeAdapter):
 
             # 获取支持的交易对
             await self._fetch_supported_symbols()
+
+            # 🔥 建立WebSocket连接（用于实时数据订阅）
+            try:
+                ws_connected = await self._websocket.connect()
+                if ws_connected:
+                    self.logger.info("✅ Backpack WebSocket连接已建立")
+                else:
+                    self.logger.warning("⚠️ Backpack WebSocket连接失败，但REST API可用")
+            except Exception as ws_err:
+                self.logger.warning(f"⚠️ Backpack WebSocket连接异常: {ws_err}，但REST API可用")
+
+            # 🔥 主动初始化余额缓存（确保启动时就有余额数据）
+            try:
+                await self.get_balances(force_refresh=True)
+                if self.logger:
+                    self.logger.debug("✅ [Backpack] 余额缓存已初始化")
+            except Exception as e:
+                if self.logger:
+                    self.logger.warning(f"⚠️ [Backpack] 初始化余额缓存失败: {e}")
 
             self._connected = True
             self.logger.info("Backpack适配器连接成功")
@@ -369,9 +411,9 @@ class BackpackAdapter(ExchangeAdapter):
 
     # === 账户方法 ===
 
-    async def get_balances(self) -> List[BalanceData]:
+    async def get_balances(self, force_refresh: bool = False) -> List[BalanceData]:
         """获取账户余额"""
-        return await self._rest.get_balances()
+        return await self._rest.get_balances(force_refresh=force_refresh)
 
     async def get_positions(self, symbols: Optional[List[str]] = None) -> List[PositionData]:
         """获取持仓信息"""
@@ -400,6 +442,7 @@ class BackpackAdapter(ExchangeAdapter):
             raise ValueError(f"限价单必须指定有效价格: {price}")
 
         order = await self._rest.create_order(symbol, side, order_type, amount, price, params)
+        self._cache_order_metadata(order)
 
         # 触发订单创建事件
         if hasattr(self, '_handle_order_update'):
@@ -410,6 +453,9 @@ class BackpackAdapter(ExchangeAdapter):
     async def cancel_order(self, order_id: str, symbol: str) -> OrderData:
         """取消订单"""
         order = await self._rest.cancel_order(order_id, symbol)
+        self._cache_order_metadata(order)
+        if order.status in (OrderStatus.CANCELED, OrderStatus.FILLED):
+            self._store_terminal_order(order)
 
         # 触发订单更新事件
         if hasattr(self, '_handle_order_update'):
@@ -423,6 +469,9 @@ class BackpackAdapter(ExchangeAdapter):
 
         # 触发订单更新事件
         for order in orders:
+            self._cache_order_metadata(order)
+            if order.status in (OrderStatus.CANCELED, OrderStatus.FILLED):
+                self._store_terminal_order(order)
             if hasattr(self, '_handle_order_update'):
                 await self._handle_order_update(order)
 
@@ -430,7 +479,27 @@ class BackpackAdapter(ExchangeAdapter):
 
     async def get_order(self, order_id: str, symbol: str) -> OrderData:
         """获取订单信息"""
-        return await self._rest.get_order(order_id, symbol)
+        cached_terminal = self._consume_recent_terminal_order(order_id)
+        if cached_terminal:
+            if self.logger:
+                self.logger.debug(
+                    f"[Backpack] 命中终态订单缓存: order_id={order_id}, status={cached_terminal.status.value}"
+                )
+            return cached_terminal
+
+        cached_order = self._lookup_cached_order_snapshot(order_id)
+        if cached_order:
+            if self.logger:
+                self.logger.debug(
+                    f"[Backpack] 命中订单缓存: order_id={order_id}, status={cached_order.status.value}"
+                )
+            return cached_order
+
+        order = await self._rest.get_order(order_id, symbol)
+        self._cache_order_metadata(order)
+        if order.status in (OrderStatus.CANCELED, OrderStatus.FILLED):
+            self._store_terminal_order(order)
+        return order
 
     async def get_open_orders(self, symbol: Optional[str] = None) -> List[OrderData]:
         """获取开放订单"""
@@ -454,6 +523,57 @@ class BackpackAdapter(ExchangeAdapter):
     async def set_margin_mode(self, symbol: str, margin_mode: str) -> Dict[str, Any]:
         """设置保证金模式"""
         return await self._rest.set_margin_mode(symbol, margin_mode)
+
+    # === 高级功能 ===
+
+    async def get_funding_rate(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """
+        获取资金费率
+        
+        从WebSocket markPrice缓存中读取资金费率数据
+        
+        Args:
+            symbol: 交易对
+            
+        Returns:
+            资金费率数据字典，包含:
+            - funding_rate: 资金费率（小数，如0.0001表示0.01%）
+            - mark_price: 标记价格
+            - next_funding_time: 下次结算时间
+            - timestamp: 数据时间戳
+        """
+        try:
+            # 确保WebSocket已连接
+            if not self._websocket or not hasattr(self._websocket, '_mark_price_cache'):
+                return None
+            
+            # 从markPrice缓存中读取
+            mark_price_data = self._websocket._mark_price_cache.get(symbol)
+            if not mark_price_data:
+                return None
+            
+            # 🔥 检查缓存是否过期：资金费率每小时更新一次，所以缓存时间应该足够长
+            # 设置为3600秒（1小时），确保资金费率不会因为时间过期而失效
+            cache_age = time.time() - mark_price_data.get("timestamp", 0)
+            if cache_age > 3600:  # 1小时超时，匹配资金费率更新频率
+                return None
+            
+            funding_rate = mark_price_data.get("funding_rate")
+            if funding_rate is None:
+                return None
+            
+            return {
+                'symbol': symbol,
+                'funding_rate': float(funding_rate),
+                'mark_price': float(mark_price_data.get("mark_price", 0)),
+                'next_funding_time': mark_price_data.get("next_funding_time"),
+                'timestamp': mark_price_data.get("timestamp")
+            }
+            
+        except Exception as e:
+            if self.logger:
+                self.logger.error(f"❌ 获取资金费率失败 {symbol}: {e}")
+            return None
 
     # === WebSocket订阅方法 ===
 
@@ -488,6 +608,11 @@ class BackpackAdapter(ExchangeAdapter):
 
         # 委托给WebSocket模块
         await self._websocket.subscribe_user_data(callback)
+
+    async def unsubscribe_user_data(self) -> None:
+        """取消用户数据流订阅"""
+        if hasattr(self._websocket, "unsubscribe_user_data"):
+            await self._websocket.unsubscribe_user_data()
 
     async def subscribe_position_updates(self, symbol: str, callback: Callable) -> None:
         """
@@ -723,7 +848,19 @@ class BackpackAdapter(ExchangeAdapter):
 
     async def get_order_status(self, symbol: str, order_id: Optional[str] = None, client_order_id: Optional[str] = None) -> OrderData:
         """获取订单状态"""
-        return await self._rest.get_order_status(symbol, order_id, client_order_id)
+        cached_terminal = self._consume_recent_terminal_order(order_id, client_order_id)
+        if cached_terminal:
+            self.logger.debug(
+                f"[Backpack] 命中终态订单缓存: order_id={order_id or client_order_id}, "
+                f"status={cached_terminal.status.value}"
+            )
+            return cached_terminal
+
+        order = await self._rest.get_order_status(symbol, order_id, client_order_id)
+        self._cache_order_metadata(order)
+        if order.status in (OrderStatus.CANCELED, OrderStatus.FILLED):
+            self._store_terminal_order(order)
+        return order
 
     async def get_recent_trades(self, symbol: str, limit: int = 500) -> List[Dict[str, Any]]:
         """获取最近成交"""
@@ -832,6 +969,86 @@ class BackpackAdapter(ExchangeAdapter):
         except Exception as e:
             self.logger.warning(f"处理订单更新事件失败: {e}")
 
+    def _cache_order_metadata(self, order: Optional[OrderData]) -> None:
+        """缓存订单元数据，便于后续兜底或终态命中"""
+        if not order or order.id is None:
+            return
+        snapshot = copy.deepcopy(order)
+        self._order_cache[str(order.id)] = snapshot
+        if order.client_id:
+            self._order_cache[str(order.client_id)] = snapshot
+
+    def _store_terminal_order(self, order: OrderData) -> None:
+        """缓存终态订单（取消或成交），避免短期内重复查询REST"""
+        if not order or order.id is None:
+            return
+        timestamp = time.monotonic()
+        snapshot = copy.deepcopy(order)
+        self._terminal_order_cache[str(order.id)] = {"order": snapshot, "timestamp": timestamp}
+        if order.client_id:
+            self._terminal_order_cache[str(order.client_id)] = {
+                "order": snapshot,
+                "timestamp": timestamp,
+            }
+
+    def _consume_recent_terminal_order(
+        self,
+        order_id: Optional[str],
+        client_order_id: Optional[str] = None,
+    ) -> Optional[OrderData]:
+        """返回终态订单缓存（命中后不必再次查询REST）"""
+        if not self._terminal_order_cache:
+            return None
+        now = time.monotonic()
+
+        def _lookup(key: Optional[str]) -> Optional[OrderData]:
+            if not key:
+                return None
+            entry = self._terminal_order_cache.get(str(key))
+            if not entry:
+                return None
+            if now - entry["timestamp"] > self._terminal_cache_ttl:
+                self._terminal_order_cache.pop(str(key), None)
+                return None
+            return copy.deepcopy(entry["order"])
+
+        order = _lookup(order_id)
+        if order:
+            return order
+        return _lookup(client_order_id)
+
+    def _lookup_cached_order_snapshot(self, key: Optional[str]) -> Optional[OrderData]:
+        """从普通订单缓存读取快照（非终态），避免重复REST查询。"""
+        if not key:
+            return None
+        cached = self._order_cache.get(str(key))
+        if not cached:
+            return None
+        return copy.deepcopy(cached)
+
+    async def _handle_internal_order_update(self, order: OrderData) -> None:
+        """内部回调：更新缓存并触发标准订单事件"""
+        if not order:
+            return
+        
+        # 🔥 确认回调被触发
+        self.logger.info(
+            f"🔍 [Backpack缓存] 回调触发: order_id={order.id}, "
+            f"status={order.status.value if order.status else 'N/A'}"
+        )
+        
+        try:
+            await self._handle_order_update(order)
+        except Exception:
+            pass
+        
+        self._cache_order_metadata(order)
+        if order.status in (OrderStatus.CANCELED, OrderStatus.FILLED):
+            self._store_terminal_order(order)
+            self.logger.info(
+                f"✅ [Backpack缓存] 终态订单已缓存: order_id={order.id}, status={order.status.value}"
+            )
+
     # === 属性和工具方法 ===
 
     async def get_market_status(self, symbol: str) -> Dict[str, Any]:
@@ -871,6 +1088,52 @@ class BackpackAdapter(ExchangeAdapter):
         """确保WebSocket连接已建立"""
         if not self._websocket._is_connection_usable():
             await self._websocket.connect()
+    
+    def _setup_balance_auto_refresh(self):
+        """设置WebSocket回调：收到账户更新时自动刷新余额"""
+        import time
+        import asyncio
+        from ..utils.cache_config import get_balance_refresh_interval
+        
+        # 🔥 优化：记录上次刷新时间（避免频繁刷新）
+        self._last_balance_refresh = 0
+        self._balance_refresh_interval = get_balance_refresh_interval()  # 🔥 使用统一配置
+        
+        async def on_account_update(data: Dict[str, Any]):
+            """收到账户更新时触发余额刷新"""
+            try:
+                # 🔥 优化：仅在订单成交或持仓变化时刷新余额（避免不必要的刷新）
+                event_type = data.get('type', '') if isinstance(data, dict) else ''
+                has_order_update = 'order' in str(data).lower() or 'trade' in str(data).lower()
+                has_position_update = 'position' in str(data).lower()
+                
+                # 如果既没有订单更新也没有持仓更新，跳过刷新
+                if not (has_order_update or has_position_update):
+                    return
+                
+                current_time = time.time()
+                # 限制刷新频率（15秒内最多刷新一次）
+                if current_time - self._last_balance_refresh < self._balance_refresh_interval:
+                    if self.logger:
+                        self.logger.debug(f"⏱️ [Backpack] 余额刷新被限流（距上次刷新 {current_time - self._last_balance_refresh:.1f}秒）")
+                    return
+                
+                self._last_balance_refresh = current_time
+                
+                # 后台异步刷新余额（不阻塞）
+                asyncio.create_task(self._rest.get_balances(force_refresh=True))
+                
+                if self.logger:
+                    self.logger.debug(f"🔄 [Backpack] 收到账户更新（{event_type}），触发余额缓存刷新")
+                    
+            except Exception as e:
+                if self.logger:
+                    self.logger.warning(f"⚠️ [Backpack] 余额自动刷新失败: {e}")
+        
+        # 注册回调到 WebSocket 的用户数据流（订单/持仓更新时触发）
+        if not hasattr(self._websocket, '_user_data_callbacks'):
+            self._websocket._user_data_callbacks = []
+        self._websocket._user_data_callbacks.append(on_account_update)
 
     def _get_symbol_cache_service(self):
         """获取符号缓存服务实例"""
@@ -883,7 +1146,7 @@ class BackpackAdapter(ExchangeAdapter):
             symbol_cache_service = container.get(ISymbolCacheService)
 
             if self.logger:
-                self.logger.info("✅ 获取符号缓存服务成功")
+                self.logger.debug("[Backpack] 符号缓存服务: 已获取")
             return symbol_cache_service
 
         except Exception as e:

@@ -46,6 +46,8 @@ from .manager import ExchangeManager
 from .adapters.hyperliquid import HyperliquidAdapter
 from .adapters.backpack import BackpackAdapter
 from .adapters.binance import BinanceAdapter
+from .adapters.paradex import ParadexAdapter
+from .adapters.variational import VariationalAdapter
 
 __all__ = [
     # 核心接口和基类
@@ -78,6 +80,8 @@ __all__ = [
     'HyperliquidAdapter',
     'BackpackAdapter',
     'BinanceAdapter',
+    'ParadexAdapter',
+    'VariationalAdapter',
 ]
 
 # 版本信息

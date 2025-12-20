@@ -1,0 +1,151 @@
+{
+  "last_update": "2025-11-20T15:54:47.827565",
+  "system_start_time": "2025-11-19T15:17:44.969193",
+  "results_count": 12,
+  "results": {
+    "ETH-USDC-PERP_edgex_backpack": {
+      "symbol": "ETH-USDC-PERP",
+      "exchange_buy": "edgex",
+      "exchange_sell": "backpack",
+      "natural_spread": -0.003622365616302093,
+      "natural_funding_rate_diff": 0.0,
+      "data_points_count": 586,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": false,
+      "last_update": "2025-11-20T15:54:47.789039"
+    },
+    "ETH-USDC-PERP_backpack_edgex": {
+      "symbol": "ETH-USDC-PERP",
+      "exchange_buy": "backpack",
+      "exchange_sell": "edgex",
+      "natural_spread": -0.004625874213291392,
+      "natural_funding_rate_diff": 0.0,
+      "data_points_count": 586,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": false,
+      "last_update": "2025-11-20T15:54:47.796200"
+    },
+    "ETH-USDC-PERP_edgex_lighter": {
+      "symbol": "ETH-USDC-PERP",
+      "exchange_buy": "edgex",
+      "exchange_sell": "lighter",
+      "natural_spread": 0.043581749304368235,
+      "natural_funding_rate_diff": 4.000000000000002e-06,
+      "data_points_count": 639,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": true,
+      "last_update": "2025-11-20T15:54:47.798675"
+    },
+    "ETH-USDC-PERP_lighter_edgex": {
+      "symbol": "ETH-USDC-PERP",
+      "exchange_buy": "lighter",
+      "exchange_sell": "edgex",
+      "natural_spread": -0.05530463637201585,
+      "natural_funding_rate_diff": 4.000000000000002e-06,
+      "data_points_count": 639,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": true,
+      "last_update": "2025-11-20T15:54:47.802178"
+    },
+    "ETH-USDC-PERP_backpack_lighter": {
+      "symbol": "ETH-USDC-PERP",
+      "exchange_buy": "backpack",
+      "exchange_sell": "lighter",
+      "natural_spread": 0.04978162460672517,
+      "natural_funding_rate_diff": 4.000000000000002e-06,
+      "data_points_count": 579,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": true,
+      "last_update": "2025-11-20T15:54:47.805325"
+    },
+    "ETH-USDC-PERP_lighter_backpack": {
+      "symbol": "ETH-USDC-PERP",
+      "exchange_buy": "lighter",
+      "exchange_sell": "backpack",
+      "natural_spread": -0.05147299673113047,
+      "natural_funding_rate_diff": 4.000000000000002e-06,
+      "data_points_count": 579,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": true,
+      "last_update": "2025-11-20T15:54:47.809050"
+    },
+    "BTC-USDC-PERP_edgex_backpack": {
+      "symbol": "BTC-USDC-PERP",
+      "exchange_buy": "edgex",
+      "exchange_sell": "backpack",
+      "natural_spread": -0.039608428395538506,
+      "natural_funding_rate_diff": 0.0,
+      "data_points_count": 648,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": true,
+      "last_update": "2025-11-20T15:54:47.814440"
+    },
+    "BTC-USDC-PERP_backpack_edgex": {
+      "symbol": "BTC-USDC-PERP",
+      "exchange_buy": "backpack",
+      "exchange_sell": "edgex",
+      "natural_spread": 0.037901899445882126,
+      "natural_funding_rate_diff": 0.0,
+      "data_points_count": 648,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": true,
+      "last_update": "2025-11-20T15:54:47.816642"
+    },
+    "BTC-USDC-PERP_edgex_lighter": {
+      "symbol": "BTC-USDC-PERP",
+      "exchange_buy": "edgex",
+      "exchange_sell": "lighter",
+      "natural_spread": 0.003921713876113058,
+      "natural_funding_rate_diff": 4.000000000000002e-06,
+      "data_points_count": 665,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": false,
+      "last_update": "2025-11-20T15:54:47.819020"
+    },
+    "BTC-USDC-PERP_lighter_edgex": {
+      "symbol": "BTC-USDC-PERP",
+      "exchange_buy": "lighter",
+      "exchange_sell": "edgex",
+      "natural_spread": -0.007403512095487886,
+      "natural_funding_rate_diff": 4.000000000000002e-06,
+      "data_points_count": 665,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": false,
+      "last_update": "2025-11-20T15:54:47.823294"
+    },
+    "BTC-USDC-PERP_backpack_lighter": {
+      "symbol": "BTC-USDC-PERP",
+      "exchange_buy": "backpack",
+      "exchange_sell": "lighter",
+      "natural_spread": 0.040271246330120296,
+      "natural_funding_rate_diff": 4.000000000000002e-06,
+      "data_points_count": 637,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": true,
+      "last_update": "2025-11-20T15:54:47.825381"
+    },
+    "BTC-USDC-PERP_lighter_backpack": {
+      "symbol": "BTC-USDC-PERP",
+      "exchange_buy": "lighter",
+      "exchange_sell": "backpack",
+      "natural_spread": -0.04191376270681925,
+      "natural_funding_rate_diff": 4.000000000000002e-06,
+      "data_points_count": 637,
+      "window_hours": 24,
+      "funding_rate_stable": false,
+      "spread_stable": true,
+      "last_update": "2025-11-20T15:54:47.827440"
+    }
+  }
+}

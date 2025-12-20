@@ -99,10 +99,10 @@ async def check_spot_reserve_on_startup(
     auto_buy = startup_config.get('auto_buy_on_startup', True)
 
     if not auto_buy:
-        logger.error("❌ 自动购买已禁用")
-        logger.info(f"💡 请手动购买至少 {shortage} {reserve_manager.base_currency}")
+        logger.warning("⚠️ 自动购买已禁用，跳过启动购买")
+        logger.info(f"💡 请手动确保余额 ≥ {required_reserve} {reserve_manager.base_currency}")
         logger.info("="*80)
-        return False
+        return True
 
     # 执行自动购买
     success = await auto_buy_reserve_if_needed(
@@ -148,7 +148,36 @@ async def auto_buy_reserve_if_needed(
 
         # 获取当前市场价格
         ticker = await exchange_adapter.get_ticker(reserve_manager.symbol)
-        current_price = Decimal(str(ticker.last))
+        current_price: Optional[Decimal] = None
+
+        # 优先使用 ticker.last
+        if ticker is not None and getattr(ticker, "last", None) is not None:
+            current_price = Decimal(str(ticker.last))
+        else:
+            # 回退：尝试用盘口中间价
+            try:
+                orderbook = await exchange_adapter.get_orderbook(reserve_manager.symbol, limit=1)
+                best_bid = None
+                best_ask = None
+                if orderbook and getattr(orderbook, "bids", None):
+                    bid_row = orderbook.bids[0]
+                    best_bid = Decimal(str(bid_row[0]))
+                if orderbook and getattr(orderbook, "asks", None):
+                    ask_row = orderbook.asks[0]
+                    best_ask = Decimal(str(ask_row[0]))
+                if best_bid is not None and best_ask is not None:
+                    current_price = (best_bid + best_ask) / 2
+                elif best_bid is not None:
+                    current_price = best_bid
+                elif best_ask is not None:
+                    current_price = best_ask
+            except Exception as _:
+                # 忽略盘口获取异常，继续后续处理
+                pass
+
+        if current_price is None:
+            logger.error("❌ 获取行情失败：无 ticker.last，且无法获取盘口价格，自动购买终止")
+            return False
 
         # 计算购买数量（确保足够）
         buy_amount = reserve_manager._round_to_precision(

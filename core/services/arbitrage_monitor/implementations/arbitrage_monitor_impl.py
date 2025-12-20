@@ -12,8 +12,8 @@ from datetime import datetime
 from collections import defaultdict
 from itertools import combinations
 
-# 修复导入路径：TickerData 在 adapters 模块中
-from core.adapters.exchanges.models import TickerData
+# 修复导入路径：OrderBookData, TickerData 在 adapters 模块中
+from core.adapters.exchanges.models import OrderBookData, TickerData
 from ..interfaces.arbitrage_monitor_service import IArbitrageMonitorService
 from ..models.arbitrage_models import (
     ArbitrageOpportunity,
@@ -52,8 +52,9 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
         self.symbol_converter = symbol_converter or SimpleSymbolConverter(self.logger)
         self.logger.info("✅ 使用极简符号转换器（~150行代码，零冗余）")
         
-        # 数据缓存
-        self.ticker_data: Dict[str, Dict[str, TickerData]] = defaultdict(dict)  # {exchange: {symbol: ticker}}
+        # 🔥 数据缓存（改造：使用订单簿数据）
+        self.orderbook_data: Dict[str, Dict[str, OrderBookData]] = defaultdict(dict)  # {exchange: {symbol: orderbook}}
+        self.ticker_data: Dict[str, Dict[str, TickerData]] = defaultdict(dict)  # {exchange: {symbol: ticker}} - 仅用于获取资金费率
         
         # 套利机会缓存
         self.opportunities: List[ArbitrageOpportunity] = []
@@ -80,6 +81,23 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
         
         # 🔥 订阅信息缓存（用于重连后恢复订阅）
         self.subscribed_callbacks: Dict[str, Dict[str, object]] = defaultdict(dict)  # {exchange: {symbol: callback}}
+        
+        # 🚀 性能优化：异步队列架构
+        self.orderbook_queue: Optional[asyncio.Queue] = None  # 订单簿数据队列
+        self.ticker_queue: Optional[asyncio.Queue] = None     # Ticker数据队列
+        self.analysis_result_queue: Optional[asyncio.Queue] = None  # 分析结果队列（给UI用）
+        self.data_processor_task = None  # 数据处理任务
+        self.analysis_task = None        # 差价分析任务
+        
+        # 🚀 性能指标
+        self.metrics = {
+            'orderbook_queue_size': 0,
+            'ticker_queue_size': 0,
+            'analysis_queue_size': 0,
+            'orderbook_processed': 0,
+            'ticker_processed': 0,
+            'last_analysis_latency_ms': 0.0,
+        }
     
     async def start(self) -> bool:
         """启动监控服务"""
@@ -91,17 +109,31 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
             self.logger.info("🚀 启动套利监控服务...")
             self.running = True
             
+            # 🚀 初始化异步队列（容量限制防止内存溢出）
+            self.orderbook_queue = asyncio.Queue(maxsize=500)  # 订单簿队列
+            self.ticker_queue = asyncio.Queue(maxsize=500)     # Ticker队列
+            self.analysis_result_queue = asyncio.Queue(maxsize=100)  # 分析结果队列
+            self.logger.info("✅ 异步队列已初始化 (订单簿队列:500, Ticker队列:500, 结果队列:100)")
+            
             # 订阅所有交易所的ticker数据
             await self._subscribe_all()
             
-            # 启动监控任务
+            # 🚀 启动数据处理任务（独立任务，高优先级）
+            self.data_processor_task = asyncio.create_task(self._process_data_queue())
+            self.logger.info("✅ 数据处理任务已启动")
+            
+            # 🚀 启动差价分析任务（独立任务，高频扫描）
+            self.analysis_task = asyncio.create_task(self._analysis_loop())
+            self.logger.info("✅ 差价分析任务已启动")
+            
+            # 保留原有监控任务（向后兼容，但频率降低）
             self.monitor_task = asyncio.create_task(self._monitor_loop())
             
             # 🔥 启动连接监控任务（新增 - 防止WebSocket静默断开）
             self.connection_monitor_task = asyncio.create_task(self._monitor_connections())
             self.logger.info(f"✅ 连接监控已启动（每{self.connection_check_interval}秒检查一次）")
             
-            self.logger.info("✅ 套利监控服务启动成功")
+            self.logger.info("✅ 套利监控服务启动成功（异步队列架构）")
             return True
             
         except Exception as e:
@@ -117,19 +149,20 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
         self.logger.info("🛑 停止套利监控服务...")
         self.running = False
         
-        # 取消监控任务
-        if self.monitor_task:
-            self.monitor_task.cancel()
-            try:
-                await self.monitor_task
-            except asyncio.CancelledError:
-                pass
+        # 🚀 取消所有任务
+        tasks_to_cancel = [
+            ("监控任务", self.monitor_task),
+            ("数据处理任务", self.data_processor_task),
+            ("差价分析任务", self.analysis_task),
+            ("连接监控任务", self.connection_monitor_task),
+        ]
         
-        # 🔥 取消连接监控任务（新增）
-        if self.connection_monitor_task:
-            self.connection_monitor_task.cancel()
+        for task_name, task in tasks_to_cancel:
+            if task:
+                task.cancel()
             try:
-                await self.connection_monitor_task
+                    await task
+                    self.logger.info(f"✅ {task_name}已停止")
             except asyncio.CancelledError:
                 pass
         
@@ -142,13 +175,29 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
         """获取当前所有套利机会"""
         return self.opportunities.copy()
     
-    def get_current_prices(self, symbol: str) -> Dict[str, Decimal]:
-        """获取当前价格"""
+    def get_current_prices(self, symbol: str) -> Dict[str, Dict[str, Decimal]]:
+        """
+        获取当前订单簿价格（买1/卖1）
+        
+        🔥 改造后返回格式：
+        {
+            "edgex": {"bid": Decimal("100.5"), "ask": Decimal("100.6"), "bid_size": Decimal("10"), "ask_size": Decimal("5")},
+            "lighter": {"bid": Decimal("100.4"), "ask": Decimal("100.7"), ...}
+        }
+        
+        Returns:
+            字典，key为交易所名称，value为订单簿买卖价和数量
+        """
         prices = {}
         for exchange_name in self.adapters.keys():
-            ticker = self.ticker_data[exchange_name].get(symbol)
-            if ticker and ticker.last:
-                prices[exchange_name] = ticker.last
+            orderbook = self.orderbook_data[exchange_name].get(symbol)
+            if orderbook and orderbook.best_bid and orderbook.best_ask:
+                prices[exchange_name] = {
+                    "bid": orderbook.best_bid.price,      # 买1价
+                    "ask": orderbook.best_ask.price,      # 卖1价
+                    "bid_size": orderbook.best_bid.size,  # 买1数量
+                    "ask_size": orderbook.best_ask.size   # 卖1数量
+                }
         return prices
     
     def get_current_funding_rates(self, symbol: str) -> Dict[str, Decimal]:
@@ -162,12 +211,42 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
     
     def get_statistics(self) -> Dict:
         """获取统计信息"""
+        # 🔥 计算每个交易所的连接健康状态
+        exchange_health = {}
+        current_time = datetime.now()
+        
+        for exchange_name in self.adapters.keys():
+            healthy_count = 0
+            total_count = len(self.config.symbols)
+            
+            for symbol in self.config.symbols:
+                if not self._is_data_stale(exchange_name, symbol, current_time):
+                    healthy_count += 1
+            
+            health_ratio = healthy_count / total_count if total_count > 0 else 0
+            reconnect_count = self.reconnect_attempts.get(exchange_name, 0)
+            is_reconnecting = self.reconnecting.get(exchange_name, False)
+            
+            exchange_health[exchange_name] = {
+                "healthy_count": healthy_count,
+                "total_count": total_count,
+                "health_ratio": health_ratio,
+                "reconnect_count": reconnect_count,
+                "is_reconnecting": is_reconnecting,
+                "status": "reconnecting" if is_reconnecting else 
+                         "healthy" if health_ratio >= 0.8 else 
+                         "degraded" if health_ratio >= 0.5 else 
+                         "unhealthy"
+            }
+        
         return {
             "total_exchanges": len(self.adapters),
             "monitored_symbols": len(self.config.symbols),
             "active_opportunities": len(self.opportunities),
             "ticker_data_count": sum(len(tickers) for tickers in self.ticker_data.values()),
-            "running": self.running
+            "running": self.running,
+            "exchange_health": exchange_health,  # 🔥 交易所健康状态
+            "performance_metrics": self.metrics.copy()  # 🚀 性能指标
         }
     
     def add_opportunity_callback(self, callback) -> None:
@@ -177,77 +256,111 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
     # === 私有方法 ===
     
     async def _subscribe_all(self):
-        """订阅所有交易所的ticker数据"""
+        """
+        订阅所有交易所的数据
+        
+        🔥 改造后：
+        1. 订阅订单簿数据（用于价格）
+        2. 订阅ticker数据（用于资金费率）
+        """
         for exchange_name, adapter in self.adapters.items():
-            self.logger.info(f"📡 订阅 {exchange_name} 的ticker数据...")
+            self.logger.info(f"📡 订阅 {exchange_name} 的订单簿和资金费率数据...")
             
-            # 🔥 Lighter 特殊处理：使用统一回调，订阅所有 symbol
+            # 🔥 Lighter 特殊处理：使用统一回调
             if exchange_name == "lighter":
-                # 定义统一回调（只注册一次）
-                callback_registered = False
-                
-                def lighter_callback(ticker):
-                    """Lighter 统一回调：从 ticker.symbol 反查标准 symbol"""
+                # === 1. 订单簿订阅（Lighter统一回调） ===
+                def lighter_orderbook_callback(orderbook):
+                    """Lighter 订单簿统一回调"""
                     try:
-                        # ticker.symbol 是 Lighter 原始格式（如 "BTC", "ETH", "AAVE"）
-                        # 需要转换为标准格式（如 "BTC-USDC-PERP"）
+                        std_symbol = self.symbol_converter.convert_from_exchange(orderbook.symbol, "lighter")
+                        if std_symbol in self.config.symbols:
+                            self._on_orderbook_update("lighter", std_symbol, orderbook)
+                    except Exception as e:
+                        self.logger.error(f"❌ Lighter 订单簿回调失败 (symbol={orderbook.symbol}): {e}", exc_info=True)
+                
+                # === 2. Ticker订阅（用于资金费率，Lighter统一回调） ===
+                def lighter_ticker_callback(ticker):
+                    """Lighter ticker统一回调（仅用于资金费率）"""
+                    try:
                         std_symbol = self.symbol_converter.convert_from_exchange(ticker.symbol, "lighter")
-                        
-                        # 只处理我们监控的 symbol
                         if std_symbol in self.config.symbols:
                             self._on_ticker_update("lighter", std_symbol, ticker)
                     except Exception as e:
-                        self.logger.error(f"❌ Lighter 回调处理失败 (symbol={ticker.symbol}): {e}", exc_info=True)
+                        self.logger.error(f"❌ Lighter ticker回调失败 (symbol={ticker.symbol}): {e}", exc_info=True)
                 
-                # 订阅所有监控的 symbol（回调只注册一次）
+                # 逐个订阅所有监控的 symbol
                 for idx, symbol in enumerate(self.config.symbols):
                     try:
                         exchange_symbol = self.symbol_converter.convert_to_exchange(symbol, "lighter")
                         
-                        # 🔥 第一次订阅时注册回调，后续订阅传 None
+                        # 🔥 订单簿订阅（首次注册回调，后续传None）
                         if idx == 0:
-                            await adapter.subscribe_ticker(exchange_symbol, lighter_callback)
-                            self.logger.info(f"✅ 已订阅 lighter.{exchange_symbol} (首次注册回调)")
+                            await adapter.subscribe_orderbook(exchange_symbol, lighter_orderbook_callback)
+                            self.logger.info(f"✅ 已订阅 lighter.{exchange_symbol} 订单簿 (首次注册回调)")
+                        else:
+                            await adapter.subscribe_orderbook(exchange_symbol, None)
+                            self.logger.debug(f"✅ 已订阅 lighter.{exchange_symbol} 订单簿")
+                        
+                        # 🔥 Ticker订阅（用于资金费率）
+                        if idx == 0:
+                            await adapter.subscribe_ticker(exchange_symbol, lighter_ticker_callback)
+                            self.logger.info(f"✅ 已订阅 lighter.{exchange_symbol} ticker (资金费率)")
                         else:
                             await adapter.subscribe_ticker(exchange_symbol, None)
-                            self.logger.info(f"✅ 已订阅 lighter.{exchange_symbol}")
+                            self.logger.debug(f"✅ 已订阅 lighter.{exchange_symbol} ticker")
                     except Exception as e:
                         self.logger.error(f"❌ 订阅失败 lighter.{symbol}: {e}")
                 
-                self.logger.info(f"✅ Lighter 订阅完成，共 {len(self.config.symbols)} 个symbol，统一回调")
+                self.logger.info(f"✅ Lighter 订阅完成，共 {len(self.config.symbols)} 个symbol (订单簿+资金费率)")
                 continue
             
-            # 🔥 其他交易所（Backpack, EdgeX）：逐个订阅
+            # 🔥 其他交易所（EdgeX, Backpack）：逐个订阅
             for symbol in self.config.symbols:
                 try:
-                    # 符号转换：标准格式 -> 交易所格式
                     exchange_symbol = self.symbol_converter.convert_to_exchange(symbol, exchange_name)
                     
-                    # 创建包装回调函数，处理不同适配器的回调签名
-                    def create_callback(ex, std_symbol):
-                        """创建回调函数工厂，捕获当前的 exchange 和 symbol"""
+                    # === 1. 订单簿回调 ===
+                    def create_orderbook_callback(ex, std_symbol):
+                        """创建订单簿回调函数工厂"""
                         def callback_wrapper(*args, **kwargs):
-                            # 兼容不同的回调签名
                             if len(args) == 1:
-                                # 只有 ticker 数据
+                                orderbook = args[0]
+                            elif len(args) == 2:
+                                _, orderbook = args
+                            else:
+                                self.logger.error(f"⚠️  未知的订单簿回调参数格式: {len(args)} 个参数")
+                                return
+                            self._on_orderbook_update(ex, std_symbol, orderbook)
+                        return callback_wrapper
+                    
+                    # === 2. Ticker回调（仅用于资金费率） ===
+                    def create_ticker_callback(ex, std_symbol):
+                        """创建ticker回调函数工厂"""
+                        def callback_wrapper(*args, **kwargs):
+                            if len(args) == 1:
                                 ticker = args[0]
                             elif len(args) == 2:
-                                # symbol + ticker（Backpack 格式）
                                 _, ticker = args
                             else:
-                                self.logger.error(f"⚠️  未知的回调参数格式: {len(args)} 个参数")
+                                self.logger.error(f"⚠️  未知的ticker回调参数格式: {len(args)} 个参数")
                                 return
-                            
-                            # 调用统一的处理函数
                             self._on_ticker_update(ex, std_symbol, ticker)
                         return callback_wrapper
                     
-                    # 订阅ticker数据（使用包装后的回调）
+                    # 🔥 订阅订单簿
+                    await adapter.subscribe_orderbook(
+                        exchange_symbol,
+                        create_orderbook_callback(exchange_name, symbol)
+                    )
+                    self.logger.info(f"✅ 已订阅 {exchange_name}.{exchange_symbol} 订单簿 (标准: {symbol})")
+                    
+                    # 🔥 订阅ticker（用于资金费率）
                     await adapter.subscribe_ticker(
                         exchange_symbol,
-                        create_callback(exchange_name, symbol)
+                        create_ticker_callback(exchange_name, symbol)
                     )
-                    self.logger.info(f"✅ 已订阅 {exchange_name}.{exchange_symbol} (标准: {symbol})")
+                    self.logger.debug(f"✅ 已订阅 {exchange_name}.{exchange_symbol} ticker (资金费率)")
+                    
                 except Exception as e:
                     self.logger.error(f"❌ 订阅失败 {exchange_name}.{symbol}: {e}")
     
@@ -260,71 +373,188 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
             except Exception as e:
                 self.logger.error(f"❌ 断开连接失败 {exchange_name}: {e}")
     
-    def _on_ticker_update(self, exchange: str, symbol: str, ticker: TickerData):
-        """处理ticker更新"""
-        # 🔥 数据验证：过滤异常价格
-        if not self._validate_ticker_data(ticker, exchange, symbol):
-            return
-        
-        # 🔥 记录数据更新时间（新增 - 用于连接健康检查）
-        self.last_data_time[exchange][symbol] = datetime.now()
-        
-        # 重置重连计数（数据正常更新说明连接恢复）
-        if self.reconnect_attempts[exchange] > 0:
-            self.logger.info(f"✅ {exchange} 数据恢复正常，重置重连计数")
-            self.reconnect_attempts[exchange] = 0
-        
-        self.ticker_data[exchange][symbol] = ticker
-        self.logger.debug(f"📊 {exchange}.{symbol}: 价格={ticker.last}, 资金费率={ticker.funding_rate}")
-    
-    def _validate_ticker_data(self, ticker: TickerData, exchange: str, symbol: str) -> bool:
+    def _on_orderbook_update(self, exchange: str, symbol: str, orderbook: OrderBookData):
         """
-        验证 ticker 数据是否合理
+        🚀 处理订单簿更新（异步队列模式 - 零延迟接收）
         
         Args:
-            ticker: ticker 数据
             exchange: 交易所名称
-            symbol: 交易对符号
-            
-        Returns:
-            数据是否有效
+            symbol: 标准化symbol
+            orderbook: 订单簿数据
         """
+        # 🚀 快速验证后立即入队，不做复杂处理
+        if not orderbook.best_bid or not orderbook.best_ask:
+            return  # 静默忽略，不记录日志
+        
+        if orderbook.best_bid.price <= 0 or orderbook.best_ask.price <= 0:
+            return  # 静默忽略，不记录日志
+        
+        # 🚀 立即放入队列（非阻塞）
         try:
-            # 1. 价格必须存在且大于 0
-            if ticker.last is None or ticker.last <= 0:
-                self.logger.warning(f"⚠️  {exchange}.{symbol}: 价格无效 (last={ticker.last})")
-                return False
-            
-            # 2. 价格不能异常大（> 10亿）
-            if ticker.last > Decimal("1000000000"):
-                self.logger.warning(f"⚠️  {exchange}.{symbol}: 价格异常大 (last={ticker.last})")
-                return False
-            
-            # 3. 价格不能异常小（< 0.0001）
-            if ticker.last < Decimal("0.0001"):
-                self.logger.warning(f"⚠️  {exchange}.{symbol}: 价格异常小 (last={ticker.last})")
-                return False
-            
-            # 4. 对于主流币种，检查价格范围是否合理
-            if symbol in ['BTC-USDC-PERP', 'BTC-USD-PERP']:
-                # BTC 价格应该在 10,000 ~ 200,000 之间
-                if ticker.last < Decimal("10000") or ticker.last > Decimal("200000"):
-                    self.logger.warning(
-                        f"⚠️  {exchange}.{symbol}: BTC价格超出合理范围 (last={ticker.last})")
-                    return False
-            
-            elif symbol in ['ETH-USDC-PERP', 'ETH-USD-PERP']:
-                # ETH 价格应该在 500 ~ 10,000 之间
-                if ticker.last < Decimal("500") or ticker.last > Decimal("10000"):
-                    self.logger.warning(
-                        f"⚠️  {exchange}.{symbol}: ETH价格超出合理范围 (last={ticker.last})")
-                    return False
-            
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"❌ 验证ticker数据失败 {exchange}.{symbol}: {e}")
-            return False
+            self.orderbook_queue.put_nowait({
+                'exchange': exchange,
+                'symbol': symbol,
+                'orderbook': orderbook,
+                'timestamp': datetime.now()
+            })
+        except asyncio.QueueFull:
+            # 队列满了，说明处理不过来，记录告警
+            self.logger.warning(f"⚠️  订单簿队列已满，丢弃 {exchange}.{symbol} 的更新")
+            pass
+    
+    def _on_ticker_update(self, exchange: str, symbol: str, ticker: TickerData):
+        """
+        🚀 处理ticker更新（异步队列模式 - 零延迟接收）
+        
+        Args:
+            exchange: 交易所名称
+            symbol: 标准化symbol
+            ticker: ticker数据
+        """
+        # 🚀 快速验证后立即入队
+        if ticker.funding_rate is None:
+            return  # 静默忽略，不记录日志
+        
+        # 🚀 立即放入队列（非阻塞）
+        try:
+            self.ticker_queue.put_nowait({
+                'exchange': exchange,
+                'symbol': symbol,
+                'ticker': ticker,
+                'timestamp': datetime.now()
+            })
+        except asyncio.QueueFull:
+            self.logger.warning(f"⚠️  Ticker队列已满，丢弃 {exchange}.{symbol} 的更新")
+            pass
+    
+    async def _process_data_queue(self):
+        """
+        🚀 数据处理任务（独立任务，高优先级）
+        
+        从队列消费数据，更新本地缓存，不做复杂分析
+        """
+        self.logger.info("🚀 数据处理任务启动...")
+        
+        while self.running:
+            try:
+                # 🚀 并发处理订单簿和ticker队列
+                tasks = []
+                
+                # 处理订单簿队列（批量）
+                orderbook_batch = []
+                while not self.orderbook_queue.empty() and len(orderbook_batch) < 50:
+                    try:
+                        data = self.orderbook_queue.get_nowait()
+                        orderbook_batch.append(data)
+                        self.orderbook_queue.task_done()
+                    except asyncio.QueueEmpty:
+                        break
+                
+                # 处理ticker队列（批量）
+                ticker_batch = []
+                while not self.ticker_queue.empty() and len(ticker_batch) < 50:
+                    try:
+                        data = self.ticker_queue.get_nowait()
+                        ticker_batch.append(data)
+                        self.ticker_queue.task_done()
+                    except asyncio.QueueEmpty:
+                        break
+                
+                # 更新本地缓存（订单簿）
+                for data in orderbook_batch:
+                    exchange = data['exchange']
+                    symbol = data['symbol']
+                    orderbook = data['orderbook']
+                    
+                    # 记录数据更新时间
+                    self.last_data_time[exchange][symbol] = data['timestamp']
+                    
+                    # 重置重连计数
+                    if self.reconnect_attempts[exchange] > 0:
+                        self.reconnect_attempts[exchange] = 0
+                    
+                    # 存储订单簿数据
+                    self.orderbook_data[exchange][symbol] = orderbook
+                    self.metrics['orderbook_processed'] += 1
+                
+                # 更新本地缓存（ticker）
+                for data in ticker_batch:
+                    exchange = data['exchange']
+                    symbol = data['symbol']
+                    ticker = data['ticker']
+                    
+                    # 记录数据更新时间
+                    self.last_data_time[exchange][symbol] = data['timestamp']
+                    
+                    # 存储ticker数据
+                    self.ticker_data[exchange][symbol] = ticker
+                    self.metrics['ticker_processed'] += 1
+                
+                # 更新性能指标
+                self.metrics['orderbook_queue_size'] = self.orderbook_queue.qsize()
+                self.metrics['ticker_queue_size'] = self.ticker_queue.qsize()
+                
+                # 短暂休眠，避免CPU占用过高
+                await asyncio.sleep(0.001)  # 1ms
+                
+            except Exception as e:
+                self.logger.error(f"❌ 数据处理错误: {e}", exc_info=True)
+                await asyncio.sleep(0.1)
+    
+    async def _analysis_loop(self):
+        """
+        🚀 差价分析任务（独立任务，高频扫描）
+        
+        高频扫描所有交易对，计算套利机会，将结果放入结果队列
+        """
+        self.logger.info("🚀 差价分析任务启动...")
+        
+        while self.running:
+            try:
+                analysis_start = datetime.now()
+                
+                # 🚀 快速扫描所有交易对
+                all_opportunities = []
+                for symbol in self.config.symbols:
+                    opportunities = await self._check_arbitrage_opportunity(symbol)
+                    all_opportunities.extend(opportunities)
+                
+                # 更新机会缓存
+                self.opportunities = all_opportunities
+                
+                # 🚀 将结果放入结果队列（供UI使用）
+                try:
+                    # 非阻塞放入，如果队列满了就丢弃旧数据
+                    while not self.analysis_result_queue.empty():
+                        try:
+                            self.analysis_result_queue.get_nowait()
+                            self.analysis_result_queue.task_done()
+                        except asyncio.QueueEmpty:
+                            break
+                    
+                    self.analysis_result_queue.put_nowait(all_opportunities)
+                except asyncio.QueueFull:
+                    pass
+                
+                # 计算分析延迟
+                analysis_latency = (datetime.now() - analysis_start).total_seconds() * 1000
+                self.metrics['last_analysis_latency_ms'] = analysis_latency
+                self.metrics['analysis_queue_size'] = self.analysis_result_queue.qsize()
+                
+                # 调用回调函数
+                if all_opportunities:
+                    for callback in self.opportunity_callbacks:
+                        try:
+                            await callback(all_opportunities)
+                        except Exception as e:
+                            self.logger.error(f"❌ 回调函数错误: {e}")
+                
+                # 🚀 高频扫描：每10ms一次（100Hz）
+                await asyncio.sleep(0.01)
+                
+            except Exception as e:
+                self.logger.error(f"❌ 差价分析错误: {e}", exc_info=True)
+                await asyncio.sleep(0.1)
     
     async def _monitor_loop(self):
         """监控循环"""
@@ -361,31 +591,39 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
                 self.logger.error(f"❌ 监控循环错误: {e}", exc_info=True)
     
     async def _check_arbitrage_opportunity(self, symbol: str) -> List[ArbitrageOpportunity]:
-        """检查单个交易对的套利机会"""
-        # 收集所有交易所的价格和资金费率
-        prices = {}
-        funding_rates = {}
+        """
+        检查单个交易对的套利机会
+        
+        🔥 改造后：使用订单簿买1/卖1价格
+        """
+        # 🔥 收集所有交易所的订单簿价格
+        orderbook_prices = {}  # {exchange: {"bid": ..., "ask": ..., "bid_size": ..., "ask_size": ...}}
         
         for exchange_name in self.adapters.keys():
+            orderbook = self.orderbook_data[exchange_name].get(symbol)
+            if orderbook and orderbook.best_bid and orderbook.best_ask:
+                orderbook_prices[exchange_name] = {
+                    "bid": orderbook.best_bid.price,
+                    "ask": orderbook.best_ask.price,
+                    "bid_size": orderbook.best_bid.size,
+                    "ask_size": orderbook.best_ask.size
+                }
+        
+        # 🔥 收集资金费率（从ticker获取）
+        funding_rates = {}
+        for exchange_name in self.adapters.keys():
             ticker = self.ticker_data[exchange_name].get(symbol)
-            
-            if ticker:
-                # 价格
-                if ticker.last and ticker.last > 0:
-                    prices[exchange_name] = ticker.last
-                
-                # 资金费率
-                if ticker.funding_rate is not None:
+            if ticker and ticker.funding_rate is not None:
                     funding_rates[exchange_name] = ticker.funding_rate
         
         # 至少需要2个交易所有价格数据
-        if len(prices) < 2:
+        if len(orderbook_prices) < 2:
             return []
         
-        # 识别套利机会
+        # 🔥 识别套利机会（使用订单簿价格）
         opportunities = self._identify_opportunities(
             symbol=symbol,
-            prices=prices,
+            orderbook_prices=orderbook_prices,
             funding_rates=funding_rates if len(funding_rates) >= 2 else None
         )
         
@@ -394,15 +632,25 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
     def _identify_opportunities(
         self,
         symbol: str,
-        prices: Dict[str, Decimal],
+        orderbook_prices: Dict[str, Dict[str, Decimal]],
         funding_rates: Optional[Dict[str, Decimal]] = None
     ) -> List[ArbitrageOpportunity]:
-        """识别套利机会"""
+        """
+        识别套利机会
+        
+        🔥 改造后：使用订单簿买1/卖1价格
+        
+        Args:
+            symbol: 交易对符号
+            orderbook_prices: 订单簿价格 {exchange: {"bid": ..., "ask": ..., ...}}
+            funding_rates: 资金费率（可选）
+        """
         opportunities = []
         
-        # 1. 价差套利机会
-        price_spreads = self._calculate_price_spreads(symbol, prices)
+        # 1. 🔥 价差套利机会（基于订单簿）
+        price_spreads = self._calculate_price_spreads(symbol, orderbook_prices)
         for spread in price_spreads:
+            # 🔥 只保留正差价（有利可图的）
             if spread.spread_pct >= self.config.price_spread_threshold:
                 opportunities.append(ArbitrageOpportunity(
                     symbol=symbol,
@@ -464,48 +712,68 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
     def _calculate_price_spreads(
         self,
         symbol: str,
-        prices: Dict[str, Decimal]
+        orderbook_prices: Dict[str, Dict[str, Decimal]]
     ) -> List[PriceSpread]:
-        """计算价差"""
+        """
+        计算价差（基于订单簿买1/卖1）
+        
+        🔥 改造后：
+        - 使用订单簿买1/卖1价格
+        - 只计算有利可图的价差（正向套利：B买1价 > A卖1价）
+        
+        Args:
+            symbol: 交易对符号
+            orderbook_prices: 订单簿价格 {exchange: {"bid": ..., "ask": ..., "bid_size": ..., "ask_size": ...}}
+        
+        Returns:
+            有利可图的价差列表，按价差百分比降序排列
+        """
         spreads = []
         
-        # 对所有交易所两两组合计算价差
-        for exchange1, exchange2 in combinations(prices.keys(), 2):
-            price1 = prices[exchange1]
-            price2 = prices[exchange2]
+        # 🔥 对所有交易所两两组合计算套利机会
+        for exchange1, exchange2 in combinations(orderbook_prices.keys(), 2):
+            book1 = orderbook_prices[exchange1]  # {bid, ask, bid_size, ask_size}
+            book2 = orderbook_prices[exchange2]
             
-            # 确保价格有效
-            if price1 <= 0 or price2 <= 0:
-                continue
+            # === 正向套利1：在exchange1买入（ask1），在exchange2卖出（bid2） ===
+            # 有利可图条件：bid2 > ask1
+            if book2["bid"] > book1["ask"]:
+                spread_abs = book2["bid"] - book1["ask"]
+                spread_pct = (spread_abs / book1["ask"]) * Decimal("100")
+                
+                spreads.append(PriceSpread(
+                    symbol=symbol,
+                    exchange_buy=exchange1,      # 在exchange1以ask1价格买入
+                    exchange_sell=exchange2,     # 在exchange2以bid2价格卖出
+                    price_buy=book1["ask"],      # 买入价格（exchange1的卖1价）
+                    price_sell=book2["bid"],     # 卖出价格（exchange2的买1价）
+                    size_buy=book1["ask_size"],  # 买入深度
+                    size_sell=book2["bid_size"], # 卖出深度
+                    spread_abs=spread_abs,       # 绝对价差
+                    spread_pct=spread_pct,       # 百分比价差
+                    timestamp=datetime.now()
+                ))
             
-            # 确定买入和卖出交易所
-            if price1 < price2:
-                exchange_buy = exchange1
-                exchange_sell = exchange2
-                price_buy = price1
-                price_sell = price2
-            else:
-                exchange_buy = exchange2
-                exchange_sell = exchange1
-                price_buy = price2
-                price_sell = price1
-            
-            # 计算价差
-            spread_abs = price_sell - price_buy
-            spread_pct = (spread_abs / price_buy) * Decimal("100")
+            # === 正向套利2：在exchange2买入（ask2），在exchange1卖出（bid1） ===
+            # 有利可图条件：bid1 > ask2
+            if book1["bid"] > book2["ask"]:
+                spread_abs = book1["bid"] - book2["ask"]
+                spread_pct = (spread_abs / book2["ask"]) * Decimal("100")
             
             spreads.append(PriceSpread(
                 symbol=symbol,
-                exchange_buy=exchange_buy,
-                exchange_sell=exchange_sell,
-                price_buy=price_buy,
-                price_sell=price_sell,
-                spread_abs=spread_abs,
-                spread_pct=spread_pct,
+                    exchange_buy=exchange2,      # 在exchange2以ask2价格买入
+                    exchange_sell=exchange1,     # 在exchange1以bid1价格卖出
+                    price_buy=book2["ask"],      # 买入价格（exchange2的卖1价）
+                    price_sell=book1["bid"],     # 卖出价格（exchange1的买1价）
+                    size_buy=book2["ask_size"],  # 买入深度
+                    size_sell=book1["bid_size"], # 卖出深度
+                    spread_abs=spread_abs,       # 绝对价差
+                    spread_pct=spread_pct,       # 百分比价差
                 timestamp=datetime.now()
             ))
         
-        # 按价差百分比降序排列
+        # 🔥 按价差百分比降序排列（最大收益排在前面）
         spreads.sort(key=lambda x: x.spread_pct, reverse=True)
         
         return spreads
@@ -792,9 +1060,23 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
             
             # 🔥 Lighter 特殊处理
             if exchange_name == "lighter":
-                # 使用统一回调
-                def lighter_callback(ticker):
-                    """Lighter 统一回调"""
+                # === 1. 订单簿回调 ===
+                def lighter_orderbook_callback(orderbook):
+                    """Lighter 订单簿统一回调"""
+                    try:
+                        std_symbol = self.symbol_converter.convert_from_exchange(
+                            orderbook.symbol, "lighter"
+                        )
+                        if std_symbol in self.config.symbols:
+                            self._on_orderbook_update("lighter", std_symbol, orderbook)
+                    except Exception as e:
+                        self.logger.error(
+                            f"❌ Lighter 订单簿回调失败 (symbol={orderbook.symbol}): {e}"
+                        )
+                
+                # === 2. Ticker回调（用于资金费率） ===
+                def lighter_ticker_callback(ticker):
+                    """Lighter ticker统一回调"""
                     try:
                         std_symbol = self.symbol_converter.convert_from_exchange(
                             ticker.symbol, "lighter"
@@ -803,7 +1085,7 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
                             self._on_ticker_update("lighter", std_symbol, ticker)
                     except Exception as e:
                         self.logger.error(
-                            f"❌ Lighter 回调处理失败 (symbol={ticker.symbol}): {e}"
+                            f"❌ Lighter ticker回调失败 (symbol={ticker.symbol}): {e}"
                         )
                 
                 # 重新订阅所有符号
@@ -813,12 +1095,19 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
                             symbol, "lighter"
                         )
                         
+                        # 订单簿订阅
                         if idx == 0:
-                            await adapter.subscribe_ticker(exchange_symbol, lighter_callback)
+                            await adapter.subscribe_orderbook(exchange_symbol, lighter_orderbook_callback)
+                        else:
+                            await adapter.subscribe_orderbook(exchange_symbol, None)
+                        
+                        # Ticker订阅
+                        if idx == 0:
+                            await adapter.subscribe_ticker(exchange_symbol, lighter_ticker_callback)
                         else:
                             await adapter.subscribe_ticker(exchange_symbol, None)
                         
-                        self.logger.debug(f"✅ 已重新订阅 lighter.{exchange_symbol}")
+                        self.logger.debug(f"✅ 已重新订阅 lighter.{exchange_symbol} (订单簿+ticker)")
                     except Exception as e:
                         self.logger.error(f"❌ 重新订阅失败 lighter.{symbol}: {e}")
             
@@ -830,8 +1119,20 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
                             symbol, exchange_name
                         )
                         
-                        # 创建回调函数
-                        def create_callback(ex, std_symbol):
+                        # === 1. 订单簿回调 ===
+                        def create_orderbook_callback(ex, std_symbol):
+                            def callback_wrapper(*args, **kwargs):
+                                if len(args) == 1:
+                                    orderbook = args[0]
+                                elif len(args) == 2:
+                                    _, orderbook = args
+                                else:
+                                    return
+                                self._on_orderbook_update(ex, std_symbol, orderbook)
+                            return callback_wrapper
+                        
+                        # === 2. Ticker回调 ===
+                        def create_ticker_callback(ex, std_symbol):
                             def callback_wrapper(*args, **kwargs):
                                 if len(args) == 1:
                                     ticker = args[0]
@@ -842,14 +1143,20 @@ class ArbitrageMonitorService(IArbitrageMonitorService):
                                 self._on_ticker_update(ex, std_symbol, ticker)
                             return callback_wrapper
                         
-                        # 重新订阅
+                        # 重新订阅订单簿
+                        await adapter.subscribe_orderbook(
+                            exchange_symbol,
+                            create_orderbook_callback(exchange_name, symbol)
+                        )
+                        
+                        # 重新订阅ticker
                         await adapter.subscribe_ticker(
                             exchange_symbol,
-                            create_callback(exchange_name, symbol)
+                            create_ticker_callback(exchange_name, symbol)
                         )
                         
                         self.logger.debug(
-                            f"✅ 已重新订阅 {exchange_name}.{exchange_symbol}"
+                            f"✅ 已重新订阅 {exchange_name}.{exchange_symbol} (订单簿+ticker)"
                         )
                     except Exception as e:
                         self.logger.error(

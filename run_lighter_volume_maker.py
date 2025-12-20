@@ -15,6 +15,13 @@ Lighter市价刷量交易主程序（支持Backpack/Hyperliquid信号源）
 - 简单高效的市价交易
 """
 
+# 🔥 加载环境变量（必须在其他导入之前）
+from dotenv import load_dotenv
+from pathlib import Path
+env_path = Path(__file__).parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+
 from core.services.volume_maker.terminal_ui import VolumeMakerTerminalUI
 from core.services.volume_maker.models.volume_maker_config import VolumeMakerConfig
 from core.services.volume_maker.implementations.lighter_market_volume_maker_service import LighterMarketVolumeMakerService
@@ -23,7 +30,6 @@ from core.adapters.exchanges.factory import get_exchange_factory
 import asyncio
 import signal
 import sys
-from pathlib import Path
 from typing import Optional
 import yaml
 
@@ -215,6 +221,7 @@ class LighterVolumeMakerApp:
                 # Lighter使用字典配置
                 config = {
                     "testnet": api_config.get('testnet', False),
+                    "auth_enabled": auth_config.get('enabled', False),  # 🔥 修复：添加auth_enabled字段，启用WebSocket账户订阅
                     "api_key_private_key": auth_config.get('api_key_private_key', ''),
                     "account_index": auth_config.get('account_index', 0),
                     "api_key_index": auth_config.get('api_key_index', 0),
@@ -326,8 +333,9 @@ class LighterVolumeMakerApp:
             traceback.print_exc()
             return False
 
-    async def run(self) -> None:
-        """运行应用"""
+    async def run(self) -> bool:
+        """运行应用，返回是否请求自动重启"""
+        restart_requested = False
         try:
             # 获取当前事件循环并设置信号处理器
             self._loop = asyncio.get_running_loop()
@@ -367,7 +375,10 @@ class LighterVolumeMakerApp:
             import traceback
             traceback.print_exc()
         finally:
-            await self.cleanup()
+            if self.service:
+                restart_requested = getattr(self.service, "restart_requested", False)
+
+        return restart_requested
 
     async def cleanup(self) -> None:
         """清理资源"""
@@ -435,20 +446,25 @@ async def main():
     print(f"配置文件: {config_file}")
     print()
 
-    # 创建应用
-    app = LighterVolumeMakerApp(config_file)
+    while True:
+        app = LighterVolumeMakerApp(config_file)
 
-    # 初始化
-    if not await app.initialize():
-        print("❌ 初始化失败，退出程序")
-        return
+        if not await app.initialize():
+            print("❌ 初始化失败，退出程序")
+            return
 
-    # 运行
-    try:
-        await app.run()
-    finally:
-        # 清理资源
-        await app.cleanup()
+        restart_requested = False
+        try:
+            restart_requested = await app.run()
+        finally:
+            await app.cleanup()
+
+        if restart_requested:
+            print("🔁 连续亏损触发自动重启，正在重新启动脚本...\n")
+            await asyncio.sleep(3)
+            continue
+
+        break
 
     print()
     print("=" * 70)

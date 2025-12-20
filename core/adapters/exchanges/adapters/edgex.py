@@ -15,6 +15,7 @@ import json
 from typing import Dict, List, Optional, Any, Union, Callable
 from decimal import Decimal
 from datetime import datetime
+import copy
 
 from ..adapter import ExchangeAdapter
 from ..interface import ExchangeConfig
@@ -37,21 +38,66 @@ class EdgeXAdapter(ExchangeAdapter):
     def __init__(self, config: ExchangeConfig, event_bus=None):
         """初始化EdgeX适配器"""
         super().__init__(config, event_bus)
+        if self.logger and hasattr(self.logger, "logger"):
+            # ExchangeAdapter 的 BaseLogger
+            self.logger = self.logger.logger
         
         # 初始化组件模块
         self.base = EdgeXBase(config)
-        self.rest = EdgeXRest(config, self.logger)
+        
+        # 🔥 先设置logger，确保REST初始化时能正确记录日志
+        self.rest = EdgeXRest(config, self.logger)  # logger已经在super().__init__中设置
         self.websocket = EdgeXWebSocket(config, self.logger)
+
+        # 🔗 共享持仓缓存，便于UI等模块直接读取 adapter._position_cache
+        shared_position_cache: Dict[str, PositionData] = {}
+        self._position_cache = shared_position_cache
+        if hasattr(self.websocket, "_position_cache"):
+            self.websocket._position_cache = shared_position_cache
+        if hasattr(self.rest, "_position_cache"):
+            self.rest._position_cache = shared_position_cache
+        self._ws_position_warned = False
+        self._ws_balance_warned = False
+        self._order_cache: Dict[str, OrderData] = {}
+        self._terminal_order_cache: Dict[str, Dict[str, Any]] = {}
+        self._terminal_cache_ttl: float = 10.0  # seconds
         
         # 复制基础配置到实例
         self.base_url = self.base.DEFAULT_BASE_URL
         self.ws_url = self.base.DEFAULT_WS_URL
         self.symbols_info = {}
         
-        # 设置日志器
+        # 确保日志器已设置（防御性编程）
         self.base.logger = self.logger
         self.rest.logger = self.logger
         self.websocket.logger = self.logger
+        
+        # 🔥 余额刷新配置（从配置文件读取）
+        self._balance_use_websocket = False  # 默认使用 REST
+        self._balance_rest_interval = 60     # 默认 60 秒刷新间隔
+        self._balance_refresh_task = None
+        self._last_balance_refresh_time = 0
+        
+        # 🔥 设置WebSocket回调：收到trade-event时自动刷新余额缓存
+        # （暂时注释掉，使用 REST 定时刷新）
+        # self._setup_balance_auto_refresh()
+
+        # 🔁 内部回调：记录订单最新状态
+        if hasattr(self.websocket, "_order_callbacks"):
+            self.websocket._order_callbacks.append(self._handle_internal_order_update)
+        
+        # 🔥 关键：阻止EdgeX日志输出到终端（与Lighter保持一致）
+        # 移除所有StreamHandler，只保留文件输出
+        if self.logger:
+            self.logger.propagate = False
+            handlers_to_remove = []
+            for handler in self.logger.handlers:
+                from logging import StreamHandler
+                from logging.handlers import RotatingFileHandler
+                if isinstance(handler, StreamHandler) and not isinstance(handler, RotatingFileHandler):
+                    handlers_to_remove.append(handler)
+            for handler in handlers_to_remove:
+                self.logger.removeHandler(handler)
         
         # 🚀 初始化订阅管理器 - 加载EdgeX配置文件
         try:
@@ -68,10 +114,11 @@ class EdgeXAdapter(ExchangeAdapter):
             )
             
             if self.logger:
-                self.logger.info(f"✅ EdgeX订阅管理器初始化成功，模式: {config_dict.get('subscription_mode', {}).get('mode', 'unknown')}")
+                mode = config_dict.get('subscription_mode', {}).get('mode', 'unknown')
+                self.logger.info(f"[EdgeX] 订阅管理器: 初始化成功 (模式: {mode})")
                 
         except Exception as e:
-            self.logger.warning(f"创建EdgeX订阅管理器失败，使用默认配置: {e}")
+            self.logger.warning(f"⚠️ [EdgeX] 创建订阅管理器失败，使用默认配置: {e}")
             # 使用默认配置
             default_config = {
                 'exchange_id': 'edgex',
@@ -96,26 +143,38 @@ class EdgeXAdapter(ExchangeAdapter):
         """加载EdgeX配置文件"""
         import yaml
         import os
+        from pathlib import Path
         
-        # 尝试多个可能的配置文件路径
+        # 尝试多个可能的配置文件路径（统一使用Path，避免属性访问错误）
+        base_dir = Path(__file__).resolve().parents[3]
         config_paths = [
-            'config/exchanges/edgex_config.yaml',
-            'config/exchanges/edgex.yaml',
-            os.path.join(os.path.dirname(__file__), '../../../../config/exchanges/edgex_config.yaml')
+            Path('config/exchanges/edgex_config.yaml'),
+            Path('config/exchanges/edgex.yaml'),
+            base_dir / 'config/exchanges/edgex_config.yaml'
         ]
         
         for config_path in config_paths:
             try:
-                if os.path.exists(config_path):
-                    with open(config_path, 'r', encoding='utf-8') as f:
+                if config_path.exists():
+                    with config_path.open('r', encoding='utf-8') as f:
                         config_data = yaml.safe_load(f)
                         
                     # 提取EdgeX配置
                     edgex_config = config_data.get('edgex', {})
                     edgex_config['exchange_id'] = 'edgex'
                     
+                    # 🔥 读取余额刷新配置
+                    balance_refresh_config = edgex_config.get('balance_refresh', {})
+                    self._balance_use_websocket = balance_refresh_config.get('use_websocket', False)
+                    self._balance_rest_interval = balance_refresh_config.get('rest_interval', 60)
+                    
                     if self.logger:
-                        self.logger.info(f"📁 成功加载EdgeX配置文件: {config_path}")
+                        self.logger.debug(f"[EdgeX] 配置文件: 已加载 ({config_path.name})")
+                        self.logger.info(
+                            f"📊 [EdgeX] 余额刷新策略: "
+                            f"{'WebSocket' if self._balance_use_websocket else 'REST'} "
+                            f"(REST间隔: {self._balance_rest_interval}秒)"
+                        )
                     
                     return edgex_config
                     
@@ -167,12 +226,16 @@ class EdgeXAdapter(ExchangeAdapter):
             self.base._supported_symbols = self.websocket._supported_symbols
             self.base._contract_mappings = self.websocket._contract_mappings
             self.base._symbol_contract_mappings = self.websocket._symbol_contract_mappings
+            # 🔄 同步映射到REST，确保REST查询的symbol一致
+            self.rest._supported_symbols = self.websocket._supported_symbols
+            self.rest._contract_mappings = self.websocket._contract_mappings
+            self.rest._symbol_contract_mappings = self.websocket._symbol_contract_mappings
             
-            self.logger.info("EdgeX连接成功")
+            self.logger.info("✅ [EdgeX] 连接成功")
             return True
 
         except Exception as e:
-            self.logger.warning(f"EdgeX连接失败: {str(e)}")
+            self.logger.warning(f"❌ [EdgeX] 连接失败: {str(e)}")
             return False
 
     async def _do_disconnect(self) -> None:
@@ -187,10 +250,10 @@ class EdgeXAdapter(ExchangeAdapter):
             # 清理订阅管理器
             self._subscription_manager.clear_subscriptions()
             
-            self.logger.info("EdgeX连接已断开")
+            self.logger.info("✅ [EdgeX] 连接已断开")
 
         except Exception as e:
-            self.logger.warning(f"断开EdgeX连接时出错: {e}")
+            self.logger.warning(f"❌ [EdgeX] 断开连接时出错: {e}")
 
     async def _do_authenticate(self) -> bool:
         """执行具体的认证逻辑"""
@@ -398,8 +461,59 @@ class EdgeXAdapter(ExchangeAdapter):
         return await self.websocket.get_supported_symbols()
 
     async def get_balances(self) -> List[BalanceData]:
-        """获取账户余额"""
-        return await self.rest.get_balances()
+        """
+        获取账户余额
+        
+        策略（根据配置文件 balance_refresh 决定）：
+        1. use_websocket=true: 使用 WebSocket 实时推送
+        2. use_websocket=false: 使用 REST API 定时刷新（推荐，更稳定）
+        """
+        import time
+        
+        # 🔥 策略1：使用 WebSocket（已注释，改用 REST）
+        # if self._balance_use_websocket:
+        #     balances = self.websocket.get_cached_balances()
+        #     if balances:
+        #         return balances
+        #     
+        #     if not hasattr(self, '_ws_balance_warned') or not self._ws_balance_warned:
+        #         if self.logger:
+        #             self.logger.info("ℹ️ [EdgeX] WS余额推送暂无，等待账户更新...")
+        #         self._ws_balance_warned = True
+        #     return []
+        
+        # 🔥 策略2：使用 REST API 定时刷新（默认，推荐）
+        current_time = time.time()
+        time_since_last_refresh = current_time - self._last_balance_refresh_time
+        
+        # 如果距离上次刷新时间未达到间隔，且有缓存，返回缓存
+        if time_since_last_refresh < self._balance_rest_interval:
+            cached_balances = getattr(self, '_cached_rest_balances', None)
+            if cached_balances:
+                return cached_balances
+        
+        # 刷新余额
+        try:
+            rest_balances = await self.rest.get_balances()
+            if rest_balances:
+                self._cached_rest_balances = rest_balances
+                self._last_balance_refresh_time = current_time
+                if self.logger:
+                    self.logger.debug(
+                        f"✅ [EdgeX] REST余额已刷新 "
+                        f"({len(rest_balances)}个资产，下次刷新: {self._balance_rest_interval}秒后)"
+                    )
+                return rest_balances
+        except Exception as e:
+            if self.logger:
+                self.logger.debug(f"REST余额查询失败: {e}")
+            
+            # 失败时返回缓存（如果有）
+            cached_balances = getattr(self, '_cached_rest_balances', None)
+            if cached_balances:
+                return cached_balances
+        
+        return []
 
     async def get_ohlcv(self, symbol: str, timeframe: str, since: Optional[datetime] = None, limit: Optional[int] = None) -> List[Dict[str, Any]]:
         """获取K线数据"""
@@ -420,33 +534,318 @@ class EdgeXAdapter(ExchangeAdapter):
 
     # === 交易接口实现 ===
 
-    async def place_order(self, symbol: str, side: OrderSide, order_type: OrderType, quantity: Decimal, 
-                         price: Decimal = None, time_in_force: str = "GTC", client_order_id: str = None) -> OrderData:
+    async def place_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        order_type: OrderType,
+        quantity: Decimal,
+        price: Optional[Decimal] = None,
+        time_in_force: str = "GTC",
+        client_order_id: Optional[str] = None,
+        reduce_only: bool = False
+    ) -> OrderData:
         """下单"""
         try:
             mapped_symbol = self.base._map_symbol(symbol)
-            return await self.rest.place_order(mapped_symbol, side, order_type, quantity, price, time_in_force, client_order_id)
+            order = await self.rest.place_order(
+                mapped_symbol,
+                side,
+                order_type,
+                quantity,
+                price,
+                time_in_force,
+                client_order_id,
+                reduce_only=reduce_only
+            )
+            self._cache_order_metadata(order)
+            return order
         except Exception as e:
             self.logger.warning(f"下单失败: {e}")
             raise
 
-    async def cancel_order(self, symbol: str, order_id: str = None, client_order_id: str = None) -> bool:
-        """取消订单"""
+    async def cancel_order(self, order_id: str, symbol: str, client_order_id: str = None) -> OrderData:
+        """
+        取消订单（ExchangeInterface标准方法）
+        
+        🔥 方案二：智能处理取消结果
+        - 如果取消失败但订单已成交，返回成交数据而非抛错
+        - 如果取消成功，返回取消后的订单状态
+        
+        Args:
+            order_id: 订单ID（注意：EdgeX SDK下单后，这实际上可能是client_id）
+            symbol: 交易对符号
+            client_order_id: 客户端订单ID（可选）
+            
+        Returns:
+            OrderData: 被取消的订单数据或已成交的订单数据
+        """
         try:
             mapped_symbol = self.base._map_symbol(symbol)
-            return await self.rest.cancel_order_by_id(mapped_symbol, order_id, client_order_id)
+            
+            # 🔥 智能判断：如果order_id看起来像client_id（时间戳格式，13位数字）
+            # 则使用client_order_id参数取消
+            actual_order_id = None
+            actual_client_id = client_order_id
+            
+            if len(order_id) == 13 and order_id.isdigit():
+                # 这很可能是client_id（时间戳格式）
+                actual_client_id = order_id
+                actual_order_id = None
+                self.logger.debug(f"[EdgeX] 检测到client_id格式: {order_id}，使用client_order_id取消")
+            else:
+                # 这是真正的order_id（EdgeX的order_id通常是长数字）
+                actual_order_id = order_id
+            
+            # 调用REST API取消订单（现在返回详细的结果）
+            cancel_result = await self.rest.cancel_order(
+                symbol=mapped_symbol,
+                order_id=actual_order_id,
+                client_order_id=actual_client_id
+            )
+            
+            # 🔥 情况1：订单已成交（取消失败但这是好结果）
+            if cancel_result.get("status") == "FILLED":
+                filled_data = cancel_result.get("filled_data")
+                
+                if filled_data:
+                    # 有完整的成交数据，解析并返回
+                    self.logger.info(
+                        f"✅ [EdgeX] 取消失败但订单已成交: {order_id}，返回成交数据"
+                    )
+                    return self.base._parse_order(filled_data)
+                else:
+                    # 没有成交数据（查询失败），使用缓存构造占位对象
+                    self.logger.warning(
+                        f"⚠️ [EdgeX] 取消失败订单已成交但无法获取详情: {order_id}，"
+                        "使用缓存构造占位对象"
+                    )
+                    cached_order = self._get_cached_order(order_id, client_order_id)
+                    if cached_order:
+                        # 修改缓存订单的状态为已成交
+                        cached_order.status = OrderStatus.FILLED
+                        cached_order.filled = cached_order.amount
+                        cached_order.remaining = Decimal("0")
+                        return cached_order
+                    else:
+                        # 无缓存，构造最小占位对象
+                        return self._build_filled_placeholder(symbol, order_id, client_order_id)
+            
+            # 🔥 情况2：取消成功
+            elif cancel_result.get("success"):
+                cached_order = self._get_cached_order(order_id, client_order_id)
+                if cached_order:
+                    cached_order.status = OrderStatus.CANCELED
+                    cached_order.remaining = Decimal("0")
+                    self._store_terminal_order(cached_order)
+                    return cached_order
+                placeholder = self._build_cancel_placeholder(symbol, order_id, client_order_id)
+                self._store_terminal_order(placeholder)
+                return placeholder
+            
+            # 🔥 情况3：取消失败（其他原因）
+            else:
+                raise Exception(f"Failed to cancel order {order_id}: {cancel_result}")
+                
         except Exception as e:
             self.logger.warning(f"取消订单失败: {e}")
-            return False
+            raise
 
     async def get_order_status(self, symbol: str, order_id: str = None, client_order_id: str = None) -> OrderData:
-        """查询订单状态"""
+        """
+        查询订单状态
+        
+        Args:
+            symbol: 交易对符号
+            order_id: 订单ID
+            client_order_id: 客户端订单ID
+            
+        Returns:
+            OrderData: 订单数据对象
+        """
+        cached_terminal = self._consume_recent_terminal_order(order_id, client_order_id)
+        if cached_terminal:
+            self.logger.debug(
+                f"[EdgeX] 命中终态订单缓存: order_id={order_id or client_order_id}, "
+                f"status={cached_terminal.status.value}"
+            )
+            return cached_terminal
+
         try:
-            mapped_symbol = self.base._map_symbol(symbol)
-            return await self.rest.get_order_status(mapped_symbol, order_id, client_order_id)
+            # 使用 REST 的 fetch_order_status 方法
+            raw_order = await self.rest.fetch_order_status(
+                symbol=symbol,
+                order_id=order_id,
+                client_order_id=client_order_id
+            )
+            
+            # 转换为 OrderData
+            return self.rest._normalize_order_data(raw_order)
+            
         except Exception as e:
-            self.logger.warning(f"查询订单状态失败: {e}")
+            self.logger.warning(f"查询订单状态失败: order_id={order_id}, error={e}")
+            # 尝试从缓存获取
+            cached_order = self._get_cached_order(order_id, client_order_id)
+            if cached_order:
+                self.logger.info(f"从缓存返回订单数据: order_id={order_id}")
+                return cached_order
             raise
+
+    def _cache_order_metadata(self, order: OrderData) -> None:
+        """缓存下单时的订单元数据，便于取消失败时兜底"""
+        cache_key = str(order.id) if order.id is not None else None
+        if cache_key:
+            self._order_cache[cache_key] = order
+        if order.client_id:
+            self._order_cache[str(order.client_id)] = order
+
+    def _get_cached_order(self, order_id: Optional[str], client_order_id: Optional[str]) -> Optional[OrderData]:
+        """根据订单ID或客户端ID获取缓存元数据"""
+        if order_id and order_id in self._order_cache:
+            return self._order_cache[order_id]
+        if client_order_id and client_order_id in self._order_cache:
+            return self._order_cache[client_order_id]
+        return None
+
+    def _store_terminal_order(self, order: OrderData) -> None:
+        """缓存最近的终态订单，避免立即触发REST查询"""
+        if not order or order.id is None:
+            return
+        snapshot = copy.deepcopy(order)
+        timestamp = time.monotonic()
+        order_key = str(order.id)
+        self._terminal_order_cache[order_key] = {"order": snapshot, "timestamp": timestamp}
+        if order.client_id:
+            self._terminal_order_cache[str(order.client_id)] = {
+                "order": snapshot,
+                "timestamp": timestamp,
+            }
+
+    def _consume_recent_terminal_order(
+        self,
+        order_id: Optional[str],
+        client_order_id: Optional[str] = None,
+    ) -> Optional[OrderData]:
+        """
+        命中最近的终态订单缓存（WS推送或撤单后已确认），命中后立即返回以避免REST查询。
+        """
+        if not self._terminal_order_cache:
+            return None
+        now = time.monotonic()
+
+        def _lookup(key: Optional[str]) -> Optional[OrderData]:
+            if not key:
+                return None
+            entry = self._terminal_order_cache.get(str(key))
+            if not entry:
+                return None
+            if now - entry["timestamp"] > self._terminal_cache_ttl:
+                self._terminal_order_cache.pop(str(key), None)
+                return None
+            return copy.deepcopy(entry["order"])
+
+        order = _lookup(order_id)
+        if order:
+            return order
+        return _lookup(client_order_id)
+
+    def _build_cancel_placeholder(
+        self,
+        symbol: str,
+        order_id: Optional[str],
+        client_order_id: Optional[str] = None
+    ) -> OrderData:
+        """当查询订单状态失败时，构造占位的取消结果，避免抛错"""
+        cached_order = self._get_cached_order(order_id, client_order_id)
+        now = datetime.utcnow()
+        placeholder_params = {}
+        if cached_order and cached_order.params:
+            placeholder_params.update(cached_order.params)
+        placeholder_params["placeholder"] = True
+
+        placeholder_raw = {"source": "cancel_placeholder"}
+        if cached_order and cached_order.raw_data:
+            placeholder_raw.update(cached_order.raw_data)
+
+        return OrderData(
+            id=str(order_id or client_order_id or f"cancel_{int(now.timestamp()*1000)}"),
+            client_id=cached_order.client_id if cached_order else client_order_id,
+            symbol=cached_order.symbol if cached_order else symbol,
+            side=cached_order.side if cached_order else OrderSide.BUY,
+            type=cached_order.type if cached_order else OrderType.LIMIT,
+            amount=cached_order.amount if cached_order else Decimal("0"),
+            price=cached_order.price if cached_order else None,
+            filled=cached_order.filled if cached_order else Decimal("0"),
+            remaining=cached_order.remaining if cached_order else Decimal("0"),
+            cost=cached_order.cost if cached_order else Decimal("0"),
+            average=cached_order.average if cached_order else None,
+            status=OrderStatus.CANCELED,
+            timestamp=cached_order.timestamp if cached_order else now,
+            updated=now,
+            fee=cached_order.fee if cached_order else None,
+            trades=cached_order.trades if cached_order else [],
+            params=placeholder_params,
+            raw_data=placeholder_raw
+        )
+
+    async def _handle_internal_order_update(self, order: OrderData) -> None:
+        """
+        内部订单更新回调：记录WS推送的最新状态，用于后续缓存命中。
+        """
+        try:
+            await super()._handle_order_update(order)
+        except Exception:
+            # 父类只是日志输出，失败时忽略
+            pass
+
+        if order:
+            self._cache_order_metadata(order)
+            if order.status in (OrderStatus.CANCELED, OrderStatus.FILLED):
+                self._store_terminal_order(order)
+    
+    def _build_filled_placeholder(
+        self,
+        symbol: str,
+        order_id: Optional[str],
+        client_order_id: Optional[str] = None
+    ) -> OrderData:
+        """
+        当取消失败且订单已成交，但无法获取成交详情时，构造占位的成交结果
+        
+        🔥 用于方案二：订单已成交但REST查询失败的兜底逻辑
+        """
+        cached_order = self._get_cached_order(order_id, client_order_id)
+        now = datetime.utcnow()
+        placeholder_params = {}
+        if cached_order and cached_order.params:
+            placeholder_params.update(cached_order.params)
+        placeholder_params["placeholder"] = True
+        placeholder_params["placeholder_reason"] = "filled_but_no_details"
+
+        placeholder_raw = {"source": "filled_placeholder"}
+        if cached_order and cached_order.raw_data:
+            placeholder_raw.update(cached_order.raw_data)
+
+        return OrderData(
+            id=str(order_id or client_order_id or f"filled_{int(now.timestamp()*1000)}"),
+            client_id=cached_order.client_id if cached_order else client_order_id,
+            symbol=cached_order.symbol if cached_order else symbol,
+            side=cached_order.side if cached_order else OrderSide.BUY,
+            type=cached_order.type if cached_order else OrderType.LIMIT,
+            amount=cached_order.amount if cached_order else Decimal("0"),
+            price=cached_order.price if cached_order else None,
+            filled=cached_order.amount if cached_order else Decimal("0"),  # 假设全部成交
+            remaining=Decimal("0"),  # 已成交，无剩余
+            cost=cached_order.cost if cached_order else Decimal("0"),
+            average=cached_order.price if cached_order else None,  # 假设按原价成交
+            status=OrderStatus.FILLED,  # 🔥 关键：状态为已成交
+            timestamp=cached_order.timestamp if cached_order else now,
+            updated=now,
+            fee=cached_order.fee if cached_order else None,
+            trades=cached_order.trades if cached_order else [],
+            params=placeholder_params,
+            raw_data=placeholder_raw
+        )
 
     async def get_open_orders(self, symbol: Optional[str] = None) -> List[OrderData]:
         """获取开放订单"""
@@ -476,13 +875,34 @@ class EdgeXAdapter(ExchangeAdapter):
             self.logger.warning(f"取消所有订单失败: {e}")
             return []
 
-    async def get_positions(self, symbols: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """获取持仓信息"""
+    async def get_positions(self, symbols: Optional[List[str]] = None) -> List[PositionData]:
+        """获取持仓信息（优先使用私有WebSocket缓存）"""
         try:
-            mapped_symbols = [self.base._map_symbol(s) for s in symbols] if symbols else None
-            return await self.rest.get_positions(mapped_symbols)
+            positions = self.websocket.get_cached_positions()
+            if symbols:
+                target_symbols = {
+                    self._normalize_symbol_filter(symbol)
+                    for symbol in symbols
+                    if symbol
+                }
+                positions = [
+                    pos for pos in positions
+                    if pos.symbol and self._normalize_symbol_filter(pos.symbol) in target_symbols
+                ]
+            
+            if not positions:
+                if self.logger and not self._ws_position_warned:
+                    self.logger.info(
+                        "ℹ️ [EdgeX] WS持仓仍为空，等待 POSITION_UPDATE/ACCOUNT_UPDATE 推送..."
+                    )
+                    self._ws_position_warned = True
+            else:
+                self._ws_position_warned = False
+            
+            return positions
         except Exception as e:
-            self.logger.warning(f"获取持仓信息失败: {e}")
+            if self.logger:
+                self.logger.warning(f"获取持仓信息失败: {e}")
             return []
 
     async def set_leverage(self, symbol: str, leverage: int) -> Dict[str, Any]:
@@ -502,6 +922,15 @@ class EdgeXAdapter(ExchangeAdapter):
         except Exception as e:
             self.logger.warning(f"设置保证金模式失败: {e}")
             return {'symbol': symbol, 'margin_mode': margin_mode, 'error': str(e)}
+
+    @staticmethod
+    def _normalize_symbol_filter(symbol: str) -> str:
+        return (
+            str(symbol)
+            .upper()
+            .replace('_', '-')
+            .replace('/', '-')
+        )
 
     # === WebSocket订阅接口实现 ===
 
@@ -546,12 +975,12 @@ class EdgeXAdapter(ExchangeAdapter):
             # 检查是否应该订阅ticker数据
             if not self._subscription_manager.should_subscribe_data_type(DataType.TICKER):
                 if self.logger:
-                    self.logger.info("配置中禁用了ticker数据订阅，跳过")
+                    self.logger.info("[EdgeX] 配置中禁用了ticker数据订阅，跳过")
                 return
             
             if not symbols:
                 if self.logger:
-                    self.logger.warning("没有找到要订阅的交易对")
+                    self.logger.warning("⚠️ [EdgeX] 没有找到要订阅的交易对")
                 return
             
             # 将订阅添加到管理器
@@ -566,11 +995,11 @@ class EdgeXAdapter(ExchangeAdapter):
             await self.websocket.batch_subscribe_tickers(symbols, callback)
             
             if self.logger:
-                self.logger.info(f"✅ EdgeX批量订阅ticker完成: {len(symbols)}个交易对")
+                self.logger.info(f"✅ [EdgeX] 批量订阅ticker完成: {len(symbols)}个交易对")
                 
         except Exception as e:
             if self.logger:
-                self.logger.error(f"EdgeX批量订阅ticker失败: {str(e)}")
+                self.logger.error(f"❌ [EdgeX] 批量订阅ticker失败: {str(e)}")
             raise
 
     async def batch_subscribe_orderbooks(self, symbols: Optional[List[str]] = None, depth: int = 15, callback: Optional[Callable[[str, OrderBookData], None]] = None) -> None:
@@ -599,12 +1028,12 @@ class EdgeXAdapter(ExchangeAdapter):
             # 检查是否应该订阅orderbook数据
             if not self._subscription_manager.should_subscribe_data_type(DataType.ORDERBOOK):
                 if self.logger:
-                    self.logger.info("配置中禁用了orderbook数据订阅，跳过")
+                    self.logger.info("[EdgeX] 配置中禁用了orderbook数据订阅，跳过")
                 return
             
             if not symbols:
                 if self.logger:
-                    self.logger.warning("没有找到要订阅的交易对")
+                    self.logger.warning("⚠️ [EdgeX] 没有找到要订阅的交易对")
                 return
             
             # 将订阅添加到管理器
@@ -619,11 +1048,11 @@ class EdgeXAdapter(ExchangeAdapter):
             await self.websocket.batch_subscribe_orderbooks(symbols, depth, callback)
             
             if self.logger:
-                self.logger.info(f"✅ EdgeX批量订阅orderbook完成: {len(symbols)}个交易对")
+                self.logger.info(f"✅ [EdgeX] 批量订阅orderbook完成: {len(symbols)}个交易对")
                 
         except Exception as e:
             if self.logger:
-                self.logger.error(f"EdgeX批量订阅orderbook失败: {str(e)}")
+                self.logger.error(f"❌ [EdgeX] 批量订阅orderbook失败: {str(e)}")
             raise
 
     async def batch_subscribe_mixed(self, 
@@ -657,7 +1086,7 @@ class EdgeXAdapter(ExchangeAdapter):
             
             if not symbols:
                 if self.logger:
-                    self.logger.warning("没有找到要订阅的交易对")
+                    self.logger.warning("⚠️ [EdgeX] 没有找到要订阅的交易对")
                 return
             
             # 根据配置决定订阅哪些数据类型
@@ -669,7 +1098,7 @@ class EdgeXAdapter(ExchangeAdapter):
                 await self.batch_subscribe_tickers(symbols, ticker_callback)
                 subscription_count += 1
                 if self.logger:
-                    self.logger.info(f"✅ 已订阅ticker数据: {len(symbols)}个交易对")
+                    self.logger.info(f"✅ [EdgeX] 已订阅ticker数据: {len(symbols)}个交易对")
             
             # 订阅orderbook数据
             if (orderbook_callback is not None and 
@@ -677,7 +1106,7 @@ class EdgeXAdapter(ExchangeAdapter):
                 await self.batch_subscribe_orderbooks(symbols, depth, orderbook_callback)
                 subscription_count += 1
                 if self.logger:
-                    self.logger.info(f"✅ 已订阅orderbook数据: {len(symbols)}个交易对")
+                    self.logger.info(f"✅ [EdgeX] 已订阅orderbook数据: {len(symbols)}个交易对")
             
             # 订阅trades数据
             if (trades_callback is not None and 
@@ -686,7 +1115,7 @@ class EdgeXAdapter(ExchangeAdapter):
                     await self.subscribe_trades(symbol, trades_callback)
                 subscription_count += 1
                 if self.logger:
-                    self.logger.info(f"✅ 已订阅trades数据: {len(symbols)}个交易对")
+                    self.logger.info(f"✅ [EdgeX] 已订阅trades数据: {len(symbols)}个交易对")
             
             # 订阅user_data数据
             if (user_data_callback is not None and 
@@ -694,17 +1123,17 @@ class EdgeXAdapter(ExchangeAdapter):
                 await self.subscribe_user_data(user_data_callback)
                 subscription_count += 1
                 if self.logger:
-                    self.logger.info(f"✅ 已订阅user_data数据")
+                    self.logger.info(f"✅ [EdgeX] 已订阅user_data数据")
             
             # 获取订阅统计信息
             stats = self._subscription_manager.get_subscription_stats()
             if self.logger:
-                self.logger.info(f"🎯 EdgeX混合订阅完成: {subscription_count}种数据类型, {len(symbols)}个交易对")
-                self.logger.info(f"📊 订阅统计: {stats}")
+                self.logger.info(f"🎯 [EdgeX] 混合订阅完成: {subscription_count}种数据类型, {len(symbols)}个交易对")
+                self.logger.info(f"📊 [EdgeX] 订阅统计: {stats}")
             
         except Exception as e:
             if self.logger:
-                self.logger.error(f"EdgeX批量混合订阅失败: {e}")
+                self.logger.error(f"❌ [EdgeX] 批量混合订阅失败: {e}")
             raise
 
     def get_subscription_manager(self) -> SubscriptionManager:
@@ -733,8 +1162,19 @@ class EdgeXAdapter(ExchangeAdapter):
         """获取最近成交记录 - 向后兼容"""
         return await self.rest.get_recent_trades(symbol, limit)
 
-    async def create_order(self, symbol: str, side: OrderSide, order_type: OrderType, amount: Decimal, price: Optional[Decimal] = None, params: Optional[Dict[str, Any]] = None) -> OrderData:
+    async def create_order(
+        self,
+        symbol: str,
+        side: OrderSide,
+        order_type: OrderType,
+        amount: Decimal,
+        price: Optional[Decimal] = None,
+        params: Optional[Dict[str, Any]] = None
+    ) -> OrderData:
         """创建订单 - 向后兼容"""
+        reduce_only = False
+        if params:
+            reduce_only = params.get('reduceOnly', params.get('reduce_only', False))
         return await self.place_order(
             symbol=symbol,
             side=side,
@@ -742,7 +1182,8 @@ class EdgeXAdapter(ExchangeAdapter):
             quantity=amount,
             price=price,
             time_in_force=params.get('timeInForce', 'GTC') if params else 'GTC',
-            client_order_id=params.get('clientOrderId') if params else None
+            client_order_id=params.get('clientOrderId') if params else None,
+            reduce_only=reduce_only
         )
 
     async def get_order(self, order_id: str, symbol: str) -> OrderData:
@@ -839,7 +1280,7 @@ class EdgeXAdapter(ExchangeAdapter):
     async def batch_subscribe_all_tickers(self, callback: Optional[Callable[[str, TickerData], None]] = None) -> None:
         """订阅所有交易对的ticker数据（使用ticker.all频道）"""
         try:
-            self.logger.info("开始订阅所有交易对的ticker数据")
+            self.logger.info("[EdgeX] 开始订阅所有交易对的ticker数据")
             
             # 建立WebSocket连接
             if not self.websocket._ws_connection:
@@ -984,6 +1425,16 @@ class EdgeXAdapter(ExchangeAdapter):
     def ws_connections(self):
         """获取WebSocket连接字典 - 向后兼容"""
         return getattr(self.websocket, 'ws_connections', {})
+    
+    def _setup_balance_auto_refresh(self):
+        """设置WebSocket回调（保留占位，余额直接由WS推送维护）"""
+        async def on_trade_event(_: Dict[str, Any]):
+            return
+        
+        # 注册回调到WebSocket
+        if not hasattr(self.websocket, '_user_data_callbacks'):
+            self.websocket._user_data_callbacks = []
+        self.websocket._user_data_callbacks.append(on_trade_event)
 
     def _get_symbol_cache_service(self):
         """获取符号缓存服务实例"""
@@ -996,7 +1447,7 @@ class EdgeXAdapter(ExchangeAdapter):
             symbol_cache_service = container.get(ISymbolCacheService)
             
             if self.logger:
-                self.logger.info("✅ 获取符号缓存服务成功")
+                self.logger.debug("[EdgeX] 符号缓存服务: 已获取")
             return symbol_cache_service
             
         except Exception as e:

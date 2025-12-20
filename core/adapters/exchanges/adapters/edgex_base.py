@@ -103,26 +103,16 @@ class EdgeXBase:
         """
         映射交易对符号
         
-        @deprecated: 建议使用统一的符号转换服务
+        🔥 优化：移除弃用警告（避免日志开销）
         """
-        if not hasattr(self, '_deprecation_logged_map'):
-            if self.logger:
-                self.logger.warning("⚠️ _map_symbol方法已弃用，建议使用统一的符号转换服务")
-            self._deprecation_logged_map = True
-        
         return self._default_symbol_mapping.get(symbol, symbol)
 
     def _reverse_map_symbol(self, exchange_symbol: str) -> str:
         """
         反向映射交易对符号
         
-        @deprecated: 建议使用统一的符号转换服务
+        🔥 优化：移除弃用警告（避免日志开销）
         """
-        if not hasattr(self, '_deprecation_logged_reverse'):
-            if self.logger:
-                self.logger.warning("⚠️ _reverse_map_symbol方法已弃用，建议使用统一的符号转换服务")
-            self._deprecation_logged_reverse = True
-        
         reverse_mapping = {v: k for k, v in self._default_symbol_mapping.items()}
         return reverse_mapping.get(exchange_symbol, exchange_symbol)
 
@@ -260,22 +250,26 @@ class EdgeXBase:
 
         return TickerData(
             symbol=symbol,
-            last=self._safe_decimal(data.get('last')),
+            last=self._safe_decimal(data.get('lastPrice') or data.get('last')),
             bid=self._safe_decimal(data.get('bid')),
             ask=self._safe_decimal(data.get('ask')),
-            bid_volume=self._safe_decimal(data.get('bidSize')),
-            ask_volume=self._safe_decimal(data.get('askSize')),
+            bid_size=self._safe_decimal(data.get('bidSize')),
+            ask_size=self._safe_decimal(data.get('askSize')),
             high=self._safe_decimal(data.get('high')),
             low=self._safe_decimal(data.get('low')),
-            volume=self._safe_decimal(data.get('volume')),
-            quote_volume=self._safe_decimal(data.get('quoteVolume')),
+            volume=self._safe_decimal(data.get('size') or data.get('volume')),
+            quote_volume=self._safe_decimal(data.get('value') or data.get('quoteVolume')),
             open=self._safe_decimal(data.get('open')),
             close=self._safe_decimal(data.get('close')),
-            change=self._safe_decimal(data.get('change')),
-            percentage=self._safe_decimal(data.get('percentage')),
+            change=self._safe_decimal(data.get('priceChange') or data.get('change')),
+            percentage=self._safe_decimal(data.get('priceChangePercent') or data.get('percentage')),
+            index_price=self._safe_decimal(data.get('indexPrice')),
+            mark_price=self._safe_decimal(data.get('oraclePrice')),
+            open_interest=self._safe_decimal(data.get('openInterest')),
+            funding_rate=self._safe_decimal(data.get('fundingRate')),
             timestamp=datetime.now(),
             exchange_timestamp=exchange_timestamp,
-            info=data
+            raw_data=data
         )
 
     def _parse_orderbook(self, data: Dict[str, Any], symbol: str) -> OrderBookData:
@@ -304,8 +298,9 @@ class EdgeXBase:
             bids=bids,
             asks=asks,
             timestamp=datetime.now(),
+            nonce=None,
             exchange_timestamp=self._parse_timestamp(data.get('timestamp')),
-            info=data
+            raw_data=data
         )
 
     def _parse_trade(self, data: Dict[str, Any], symbol: str) -> TradeData:
@@ -317,9 +312,10 @@ class EdgeXBase:
             amount=self._safe_decimal(data.get('amount')),
             price=self._safe_decimal(data.get('price')),
             cost=self._safe_decimal(data.get('cost')),
+            fee=None,
             timestamp=datetime.now(),
-            exchange_timestamp=self._parse_timestamp(data.get('timestamp')),
-            info=data
+            order_id=None,
+            raw_data=data
         )
 
     def _parse_balance(self, data: Dict[str, Any], currency: str) -> BalanceData:

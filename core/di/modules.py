@@ -71,11 +71,12 @@ class DataModule(Module):
         binder.bind(DataAggregator, to=DataAggregator, scope=singleton)
 
 
-class MonitoringModule(Module):
-    """监控模块"""
-    
-    def configure(self, binder):
-        binder.bind(MonitoringService, to=EnhancedMonitoringServiceImpl, scope=singleton)
+# ❌ 旧的监控模块已废弃，MonitoringService已移至 deprecated/old_monitoring_system/
+# class MonitoringModule(Module):
+#     """监控模块"""
+#     
+#     def configure(self, binder):
+#         binder.bind(MonitoringService, to=EnhancedMonitoringServiceImpl, scope=singleton)
 
 
 # 所有模块的集合 - 按依赖顺序排列
@@ -85,5 +86,5 @@ ALL_MODULES = [
     ExchangeModule,     # 交易所管理
     SymbolModule,       # 符号转换和缓存服务
     DataModule,         # 数据聚合
-    MonitoringModule    # 监控服务 - 依赖其他服务
+    # MonitoringModule    # ❌ 已废弃：监控服务已移至 deprecated/old_monitoring_system/
 ] 

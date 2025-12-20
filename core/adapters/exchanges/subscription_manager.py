@@ -100,7 +100,7 @@ class SubscriptionManager:
         self._cached_symbols: List[str] = []
         self._last_discovery_time: float = 0
         
-        self.logger.info(f"✅ 订阅管理器初始化完成，模式: {self.mode.value}")
+        # 日志由适配器统一记录，这里不记录
     
     def _parse_config(self):
         """解析配置文件"""

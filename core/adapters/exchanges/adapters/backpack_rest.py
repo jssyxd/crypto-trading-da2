@@ -8,9 +8,18 @@ import asyncio
 import aiohttp
 import time
 import json
+import base64
+import hashlib
 from typing import Dict, List, Optional, Any
 from decimal import Decimal
 from datetime import datetime
+
+try:
+    import nacl.signing  # type: ignore
+    _PY_NACL_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    nacl = None  # type: ignore
+    _PY_NACL_AVAILABLE = False
 
 from .backpack_base import BackpackBase, BackpackSymbolInfo
 from ..models import (
@@ -30,11 +39,35 @@ class BackpackRest(BackpackBase):
 
         # API认证信息
         self.api_key = getattr(config, 'api_key', '') if config else ''
+        # 🔥 Backpack使用ED25519签名，需要private_key（兼容api_secret）
         self.api_secret = getattr(config, 'api_secret', '') if config else ''
+        private_key = getattr(config, 'private_key', '') if config else ''
+        # 🔥 优先使用private_key，如果没有则使用api_secret
+        if not self.api_secret and private_key:
+            self.api_secret = private_key
         self.is_authenticated = bool(self.api_key and self.api_secret)
+        
+        if self.logger:
+            if self.is_authenticated:
+                self.logger.debug(f"✅ [Backpack REST] 认证信息已配置 (api_key={bool(self.api_key)}, private_key={bool(self.api_secret)})")
+            else:
+                self.logger.warning(f"⚠️  [Backpack REST] 认证信息未配置 (api_key={bool(self.api_key)}, private_key={bool(self.api_secret)})")
 
         # 精度缓存：symbol -> (price_precision, qty_precision)
         self._precision_cache: Dict[str, tuple[int, int]] = {}
+
+        # 余额缓存
+        self._balance_cache: List[BalanceData] = []
+        self._balance_cache_time: float = 0.0
+        self._balance_cache_ttl: float = 30.0  # 默认缓存30秒，可通过配置调整
+
+        self._signing_available = _PY_NACL_AVAILABLE
+        self._signing_warning_emitted = False
+        if not self._signing_available and self.logger:
+            self.logger.warning(
+                "⚠️  [Backpack REST] 未检测到 PyNaCl，私有API（余额/下单）将被禁用。"
+                "如需启用，请执行: pip install PyNaCl"
+            )
 
     # === 连接管理 ===
 
@@ -264,12 +297,8 @@ class BackpackRest(BackpackBase):
                     f"api_secret长度: {len(self.api_secret) if self.api_secret else 0}")
             return {}
 
-        try:
-            import nacl.signing
-            import base64
-            import hashlib
-        except ImportError:
-            raise RuntimeError("请安装PyNaCl库: pip install PyNaCl")
+        if not self._signing_available:
+            raise RuntimeError("PyNaCl 未安装，无法生成Backpack签名")
 
         # 获取指令类型
         instruction_type = self._determine_instruction_type(method, endpoint)
@@ -292,9 +321,13 @@ class BackpackRest(BackpackBase):
         # 处理请求体数据
         if data and len(data) > 0:
             filtered_data = {k: v for k, v in data.items() if v is not None}
+            def _normalize_value(val):
+                if isinstance(val, bool):
+                    return str(val).lower()
+                return val
             sorted_keys = sorted(filtered_data.keys())
             for key in sorted_keys:
-                signature_str += f"&{key}={filtered_data[key]}"
+                signature_str += f"&{key}={_normalize_value(filtered_data[key])}"
 
         # 添加时间戳和窗口
         signature_str += f"&timestamp={timestamp}&window={window}"
@@ -314,7 +347,7 @@ class BackpackRest(BackpackBase):
             private_key_bytes = hashlib.sha256(private_key_bytes).digest()
 
         # 使用ED25519算法签名
-        signing_key = nacl.signing.SigningKey(private_key_bytes)
+        signing_key = nacl.signing.SigningKey(private_key_bytes)  # type: ignore[attr-defined]
         message_bytes = signature_str.encode('utf-8')
         signature_bytes = signing_key.sign(message_bytes).signature
 
@@ -945,11 +978,15 @@ class BackpackRest(BackpackBase):
 
     # === 账户接口 ===
 
-    async def get_balances(self) -> List[BalanceData]:
-        """获取账户余额
+    async def get_balances(self, force_refresh: bool = False) -> List[BalanceData]:
+        """获取账户余额（带缓存）
 
         🔥 重要：Backpack统一账户，资金在保证金账户中
         使用 /api/v1/capital/collateral 而不是 /api/v1/capital
+        
+        🎯 缓存策略：
+        - 缓存有效期：5秒
+        - WebSocket 更新时自动刷新缓存
 
         API返回格式:
         {
@@ -966,9 +1003,40 @@ class BackpackRest(BackpackBase):
             ...
         }
         """
+        import time
+        from datetime import datetime
+        
+        # 🔥 优先使用缓存（TTL内有效，除非 force_refresh）
+        current_time = time.time()
+        cache_ttl = getattr(self, "_balance_cache_ttl", 30.0)
+        if (
+            not force_refresh
+            and self._balance_cache
+            and (current_time - self._balance_cache_time) < cache_ttl
+        ):
+            if self.logger:
+                self.logger.debug(
+                    f"✅ [Backpack] 使用余额缓存 (年龄: {current_time - self._balance_cache_time:.1f}秒)"
+                )
+            return self._balance_cache
+        
+        if not self._signing_available:
+            if self.logger and not self._signing_warning_emitted:
+                self.logger.warning(
+                    "⚠️  [Backpack REST] PyNaCl 未安装，无法访问余额接口（已跳过私有API请求）"
+                )
+                self._signing_warning_emitted = True
+            return self._balance_cache
+
         try:
             # 🔥 使用 collateral 端点获取真实余额
+            if self.logger:
+                self.logger.debug(f"🔍 [Backpack] 开始查询余额...")
+            
             data = await self._make_authenticated_request("GET", "/api/v1/capital/collateral")
+            
+            if self.logger:
+                self.logger.debug(f"🔍 [Backpack] API响应: {type(data)}, keys={list(data.keys()) if isinstance(data, dict) else 'N/A'}")
 
             balances = []
 
@@ -992,8 +1060,11 @@ class BackpackRest(BackpackBase):
 
                     # available = 可用余额
                     # used = 借出余额 + 订单冻结
-                    free = available_quantity
-                    used = lend_quantity + open_order_quantity
+                    # 🔁 Backpack 统一账户：totalQuantity 才是真实可用余额
+                    # availableQuantity 会被借出流程占用，长期为0
+                    free = total_quantity
+                    # 记录借出/冻结明细到 raw_data，而不是映射到 used 字段
+                    used = Decimal("0")
 
                     # 🔥 将顶层账户字段附加到 raw_data，便于后续使用
                     # 这样每个币种的余额都能访问账户级别的数据
@@ -1008,17 +1079,23 @@ class BackpackRest(BackpackBase):
                         '_account_assetsValue': data.get('assetsValue', '0'),
                         '_account_liabilitiesValue': data.get('liabilitiesValue', '0'),
                         '_account_marginFraction': data.get('marginFraction', '0'),
+                        '_lendQuantity': str(lend_quantity),
+                        '_openOrderQuantity': str(open_order_quantity),
+                        '_availableQuantity': str(available_quantity),
                     }
 
+                    # 🔥 重要：total字段必须使用totalQuantity（总余额），而不是availableQuantity（可用余额）
+                    # Backpack统一账户中，资金可能在借出（lend）或订单冻结中
+                    # 使用总余额才能正确判断账户是否有资金进行交易
                     balance = BalanceData(
                         currency=currency,
-                        free=free,
-                        used=used,
-                        total=total_quantity,
+                        free=free,  # 可用余额（可能为0，但账户仍有资金）
+                        used=used,  # 已用余额（借出+订单冻结）
+                        total=total_quantity,  # 🔥 总余额（用于判断账户是否有资金）
                         usd_value=self._safe_decimal(
                             item.get('balanceNotional', '0')),
                         timestamp=datetime.now(),
-                        raw_data=raw_data_with_account_info  # 🔥 使用增强的 raw_data
+                        raw_data={'source': 'rest', **raw_data_with_account_info}  # 🔥 标记来源
                     )
                     balances.append(balance)
 
@@ -1044,15 +1121,38 @@ class BackpackRest(BackpackBase):
                         total=total,
                         usd_value=None,
                         timestamp=datetime.now(),
-                        raw_data=balance_info
+                        raw_data={'source': 'rest', **balance_info}  # 🔥 标记来源
                     )
                     balances.append(balance)
+            
+            # 🔥 更新缓存
+            self._balance_cache = balances
+            self._balance_cache_time = time.time()
+            
+            if self.logger:
+                if balances:
+                    # 🔥 优化：简化日志格式，减少重复日志
+                    self.logger.info(f"[Backpack] 余额查询成功: {len(balances)}个币种")
+                    for bal in balances:
+                        self.logger.debug(f"  {bal.currency}: 可用={bal.free}, 冻结={bal.used}, 总计={bal.total}")
+                else:
+                    self.logger.warning(f"[Backpack] 余额查询成功但未找到余额数据")
 
             return balances
 
         except Exception as e:
             if self.logger:
-                self.logger.error(f"获取余额失败: {e}")
+                # 🔥 记录详细错误信息（包括认证错误）
+                error_msg = str(e)
+                if "Exchange not authenticated" in error_msg or "未配置API" in error_msg or "无法获取" in error_msg:
+                    self.logger.warning(f"⚠️  [Backpack] 余额查询失败（认证问题）: {e}")
+                else:
+                    self.logger.error(f"❌ [Backpack] 余额查询失败: {e}", exc_info=True)
+            # 🔥 失败时返回空列表，但保留旧缓存（如果有）
+            if hasattr(self, '_balance_cache') and self._balance_cache:
+                if self.logger:
+                    self.logger.debug(f"🔄 [Backpack] 使用旧缓存余额")
+                return self._balance_cache
             return []
 
     async def get_positions(self, symbols: Optional[List[str]] = None) -> List[PositionData]:
@@ -1167,7 +1267,13 @@ class BackpackRest(BackpackBase):
 
         except Exception as e:
             if self.logger:
-                self.logger.error(f"获取持仓失败: {e}")
+                # 🔥 只写入日志文件，不输出到控制台（避免UI抖动）
+                # 如果是因为未配置API密钥导致的错误，使用debug级别
+                error_msg = str(e)
+                if "Exchange not authenticated" in error_msg or "未配置API" in error_msg or "无法获取" in error_msg:
+                    self.logger.debug(f"获取持仓失败: {e}")
+                else:
+                    self.logger.error(f"获取持仓失败: {e}")
             return []
 
     # === 辅助方法 ===
@@ -1376,7 +1482,17 @@ class BackpackRest(BackpackBase):
             order_data["price"] = formatted_price  # 直接使用，已经是字符串
 
         if params:
+            # 处理 reduce_only 参数（Backpack使用驼峰 reduceOnly）
+            reduce_only_flag = False
+            if "reduce_only" in params:
+                reduce_only_flag = bool(params.pop("reduce_only"))
+            elif "reduceOnly" in params:
+                reduce_only_flag = bool(params.pop("reduceOnly"))
+
             order_data.update(params)
+
+            if reduce_only_flag:
+                order_data["reduceOnly"] = True
 
         try:
             response = await self._make_authenticated_request("POST", "/api/v1/order", data=order_data)
@@ -1424,11 +1540,19 @@ class BackpackRest(BackpackBase):
 
         except Exception as e:
             if self.logger:
-                self.logger.error(f"创建订单失败: {e}")
-                self.logger.error(f"异常类型: {type(e).__name__}")
-                self.logger.error(f"订单数据: {order_data}")
-                import traceback
-                self.logger.error(f"异常堆栈: {traceback.format_exc()}")
+                # 🔥 只写入日志文件，不输出到控制台（避免UI抖动）
+                # 如果是因为未配置API密钥导致的错误，使用debug级别
+                error_msg = str(e)
+                if "Exchange not authenticated" in error_msg or "未配置API" in error_msg:
+                    self.logger.debug(f"创建订单失败: {e}")
+                    self.logger.debug(f"异常类型: {type(e).__name__}")
+                    self.logger.debug(f"订单数据: {order_data}")
+                else:
+                    self.logger.error(f"创建订单失败: {e}")
+                    self.logger.error(f"异常类型: {type(e).__name__}")
+                    self.logger.error(f"订单数据: {order_data}")
+                    import traceback
+                    self.logger.error(f"异常堆栈: {traceback.format_exc()}")
             raise
 
     async def cancel_order(self, order_id: str, symbol: str) -> OrderData:
@@ -1539,11 +1663,19 @@ class BackpackRest(BackpackBase):
         try:
             response = await self._make_authenticated_request(
                 "GET",
-                f"/api/v1/order/{order_id}",
-                params={"symbol": mapped_symbol}
+                "/api/v1/order",
+                params={"orderId": order_id, "symbol": mapped_symbol}
             )
 
-            return self._parse_order(response.get('order', {}))
+            if isinstance(response, dict):
+                order_payload = response.get('order', response)
+            else:
+                order_payload = response
+
+            if not isinstance(order_payload, dict):
+                raise ValueError(f"API返回了非预期类型数据: {order_payload}")
+
+            return self._parse_order(order_payload)
 
         except Exception as e:
             if self.logger:
@@ -1991,13 +2123,13 @@ class BackpackRest(BackpackBase):
 
     async def get_order_status(self, symbol: str, order_id: Optional[str] = None, client_order_id: Optional[str] = None) -> OrderData:
         """获取订单状态"""
-        try:
-            params = {"symbol": symbol}
-            if order_id:
-                params["orderId"] = order_id
-            if client_order_id:
-                params["clientOrderId"] = client_order_id
+        params = {"symbol": symbol}
+        if order_id:
+            params["orderId"] = order_id
+        if client_order_id:
+            params["clientOrderId"] = client_order_id
 
+        try:
             response = await self._make_authenticated_request("GET", "/api/v1/order", params=params)
 
             # 检查响应是否为字典类型
@@ -2008,6 +2140,37 @@ class BackpackRest(BackpackBase):
 
             return self._parse_order(response)
         except Exception as e:
+            message = str(e)
+            is_not_found = "RESOURCE_NOT_FOUND" in message or "404" in message
+
+            if is_not_found:
+                target_order_id = str(order_id) if order_id else None
+                target_client_id = str(client_order_id) if client_order_id else None
+
+                if self.logger:
+                    self.logger.info(
+                        "🔁 [Backpack] 实时接口无此订单，改用历史接口回查: "
+                        f"order_id={target_order_id}, client_id={target_client_id}"
+                    )
+
+                history_orders = await self.get_order_history(symbol=symbol, limit=200)
+                for hist_order in history_orders:
+                    hist_id = str(hist_order.id) if hist_order.id is not None else None
+                    hist_client = str(hist_order.client_id) if hist_order.client_id else None
+                    if (target_order_id and hist_id == target_order_id) or (
+                        target_client_id and hist_client == target_client_id
+                    ):
+                        if self.logger:
+                            self.logger.info(
+                                "✅ [Backpack] 历史接口命中订单，返回解析结果"
+                            )
+                        return hist_order
+
+                if self.logger:
+                    self.logger.warning(
+                        "⚠️ [Backpack] 历史订单列表也未找到目标订单，保持原异常抛出"
+                    )
+
             if self.logger:
                 self.logger.warning(f"获取订单状态失败: {e}")
             raise

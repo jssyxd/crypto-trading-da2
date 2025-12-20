@@ -1,0 +1,33 @@
+# 多交易所套利配置（默认关闭）
+# 说明：
+# - enabled: 是否启用
+# - mode:
+#     - one_to_many: 指定中心交易所与多个对手交易所套利
+#     - many_to_many: 所有交易所之间自动生成一对一组合
+# - allow_reverse: 是否允许自动选择方向（True=根据价差自动决定买卖方向）
+# - min_spread_pct: (可选) 每个组合的最小价差要求，单位：百分比
+#
+# 示例：
+# mode: "one_to_many"
+# center_exchange: "lighter"
+# counter_exchanges:
+#   - "backpack"
+#   - "edgex"
+# symbols:
+#   - "BTC-USDC-PERP"
+
+enabled: false
+mode: "one_to_many"
+allow_reverse: true
+min_spread_pct:
+center_exchange: "lighter"
+counter_exchanges:
+  - "edgex"
+#   - "backpack"
+  - "paradex"
+symbols:
+  - "BTC-USDC-PERP"
+  - "ETH-USDC-PERP"
+  - "SOL-USDC-PERP"
+  - "HYPE-USDC-PERP"
+#  - "PAXG-USDC-PERP"

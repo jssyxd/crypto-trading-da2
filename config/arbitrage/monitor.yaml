@@ -1,27 +1,69 @@
 # ============================================================================
-# 套利监控系统配置
+# 套利监控系统配置 V1
+# ============================================================================
+# 
+# 所属系统: 套利监控系统 V1（旧版本）
+# 使用脚本: run_arbitrage_monitor.py
+# 模块路径: core/services/arbitrage_monitor/
 # ============================================================================
 
-# 交易所配置（当前专注开发 Lighter 和 EdgeX）
+# 交易所配置（当前专注开发 Lighter、EdgeX、Paradex）
 exchanges:
   # - backpack  # 暂时禁用，等脚本稳定后再接入
   - edgex
   - lighter
+  - paradex
 
 # 监控的交易对（标准化符号格式）
+# 🚀 47个高交易量代币（交易量 >= 1M USD，从 edgex_lighter_markets.json 筛选）
 symbols:
-  - BTC-USDC-PERP
-  - ETH-USDC-PERP
-  - SOL-USDC-PERP
-  - DOGE-USDC-PERP
-  - AVAX-USDC-PERP
-  - LINK-USDC-PERP
-  - UNI-USDC-PERP
-  - CRV-USDC-PERP
-  - ADA-USDC-PERP
+  - 1000PEPE-USDC-PERP
+  - 1000SHIB-USDC-PERP
   - AAVE-USDC-PERP
+  - ADA-USDC-PERP
+  - APT-USDC-PERP
+  - ARB-USDC-PERP
+  - ASTER-USDC-PERP
+  - AVAX-USDC-PERP
+  - AVNT-USDC-PERP
+  - BCH-USDC-PERP
+  - BNB-USDC-PERP
+  - BTC-USDC-PERP
+  - CRO-USDC-PERP
+  - DOGE-USDC-PERP
+  - DOT-USDC-PERP
+  - ENA-USDC-PERP
+  - ETH-USDC-PERP
+  - FIL-USDC-PERP
+  - HBAR-USDC-PERP
   - HYPE-USDC-PERP
+  - ICP-USDC-PERP
+  - IP-USDC-PERP
+  - KAITO-USDC-PERP
+  - LINK-USDC-PERP
+  - LTC-USDC-PERP
+  - MNT-USDC-PERP
   - NEAR-USDC-PERP
+  - ONDO-USDC-PERP
+  - OP-USDC-PERP
+  - PAXG-USDC-PERP
+  - PUMP-USDC-PERP
+  - RESOLV-USDC-PERP
+  - SEI-USDC-PERP
+  - SOL-USDC-PERP
+  - SUI-USDC-PERP
+  - TAO-USDC-PERP
+  - TON-USDC-PERP
+  - TRUMP-USDC-PERP
+  - TRX-USDC-PERP
+  - UNI-USDC-PERP
+  - VIRTUAL-USDC-PERP
+  - WLD-USDC-PERP
+  - XMR-USDC-PERP
+  - XRP-USDC-PERP
+  - ZEC-USDC-PERP
+  - ZK-USDC-PERP
+  - ZORA-USDC-PERP
 
 # 套利阈值配置
 thresholds:
@@ -47,4 +89,9 @@ logging:
   level: INFO
   file: logs/arbitrage_monitor.log
   console: true
+
+# 调试CLI输出（重构版统一调度器）
+debug_cli:
+  enabled: true              # 设为true启用纯CLI调试模式
+  interval_seconds: 1.0      # CLI状态打印间隔（秒）
 

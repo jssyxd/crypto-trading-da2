@@ -257,15 +257,6 @@ class VirtualGrid:
 
         # 🔥 双边挂单逻辑：同时检查买单和卖单
 
-        # 🔥 BTC详细日志：记录价格变化和挂单状态
-        if _is_btc_symbol(self.symbol):
-            logger.info(
-                f"[{self.symbol}] 价格更新 | "
-                f"${self.last_price:.4f} → ${new_price:.4f} | "
-                f"买单=${self.pending_buy_price:.4f}, 卖单=${self.pending_sell_price:.4f} | "
-                f"买入{self.buy_crosses}次, 卖出{self.sell_crosses}次, 循环{self.complete_cycles}次"
-            )
-
         # 检查买单触发（价格下跌）
         if self.pending_buy_price and new_price <= self.pending_buy_price:
             # ✅ 买入成交

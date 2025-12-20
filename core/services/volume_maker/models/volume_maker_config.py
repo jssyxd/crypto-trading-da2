@@ -118,6 +118,8 @@ class VolumeMakerConfig:
     cycle_interval: int = 0
     emergency_stop: bool = True
     auto_restart_on_error: bool = False
+    loss_restart_enabled: bool = False
+    loss_restart_threshold: int = 0
 
     # 子配置
     logging: LoggingConfig = field(default_factory=LoggingConfig)
@@ -184,7 +186,9 @@ class VolumeMakerConfig:
                 'min_balance') else None,
             cycle_interval=vm_data.get('cycle_interval', 0),
             emergency_stop=vm_data.get('emergency_stop', True),
-            auto_restart_on_error=vm_data.get('auto_restart_on_error', False)
+            auto_restart_on_error=vm_data.get('auto_restart_on_error', False),
+            loss_restart_enabled=vm_data.get('loss_restart', {}).get('enabled', False),
+            loss_restart_threshold=vm_data.get('loss_restart', {}).get('consecutive_losses', 7)
         )
 
         # 日志配置

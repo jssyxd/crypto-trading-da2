@@ -1,0 +1,113 @@
+# ============================================================================
+# 套利监控系统配置 V2（纯监控 UI）
+# ============================================================================
+# 
+# 所属系统: 套利监控系统 V2（仅监控 / 无执行）
+# 使用脚本: run_arbitrage_monitor_v2.py, run_arbitrage_monitor_simple.py
+# 模块路径: core/services/arbitrage_monitor_v2/
+# ============================================================================
+
+# 交易所配置（当前使用 EdgeX、Backpack、Lighter、Paradex 四个交易所）
+exchanges:
+  - edgex
+# - backpack
+  - lighter
+  - paradex
+
+# 监控的交易对（标准化符号格式）
+# 🔥 当前订阅15个高交易量代币（其他代币已注释，方便后续恢复）
+symbols:
+ #  - APT-USDC-PERP
+  # - ASTER-USDC-PERP
+  # - BNB-USDC-PERP
+  - BTC-USDC-PERP
+ #  - DOGE-USDC-PERP
+ #  - ENA-USDC-PERP
+  - ETH-USDC-PERP
+  - HYPE-USDC-PERP
+ #  - LINK-USDC-PERP
+#   - LTC-USDC-PERP
+  - SOL-USDC-PERP
+#  - PAXG-USDC-PERP
+ #  - TRUMP-USDC-PERP
+ #  - TRX-USDC-PERP
+ #  - XRP-USDC-PERP
+ #  - RESOLV-USDC-PERP
+ #  - 1000PEPE-USDC-PERP
+ #  - 1000SHIB-USDC-PERP
+ #  - AAVE-USDC-PERP
+ #  - ADA-USDC-PERP
+  # - ARB-USDC-PERP
+  # - AVAX-USDC-PERP
+ #  - AVNT-USDC-PERP
+  # - BCH-USDC-PERP
+  # - CRO-USDC-PERP
+  # - DOT-USDC-PERP
+  # - FIL-USDC-PERP
+  # - HBAR-USDC-PERP
+  # - ICP-USDC-PERP
+  # - IP-USDC-PERP
+  # - KAITO-USDC-PERP
+  # - MNT-USDC-PERP
+  # - NEAR-USDC-PERP
+  # - ONDO-USDC-PERP
+  # - OP-USDC-PERP
+  # - PUMP-USDC-PERP
+  # - SEI-USDC-PERP
+  # - SUI-USDC-PERP
+  # - TAO-USDC-PERP
+  # - TON-USDC-PERP
+  # - UNI-USDC-PERP
+  # - VIRTUAL-USDC-PERP
+  # - WLD-USDC-PERP
+  # - XMR-USDC-PERP
+  # - ZEC-USDC-PERP
+  # - ZK-USDC-PERP
+  # - ZORA-USDC-PERP
+
+# 套利阈值配置
+thresholds:
+  min_spread_pct: 0.1          # 最小价差百分比（0.1%）
+  min_funding_rate_diff: 0.01  # 最小资金费率差异（0.01%）
+
+# WebSocket配置
+websocket:
+  ping_interval: 30            # 心跳间隔（秒）
+  reconnect_delay: 5           # 重连延迟（秒）
+  max_reconnect_attempts: 5    # 最大重连次数
+
+# 性能配置
+performance:
+  analysis_interval_ms: 10     # 分析间隔（毫秒）
+  ui_refresh_interval_ms: 1000 # UI刷新间隔（毫秒）
+
+# 健康检查配置
+health_check:
+  interval: 10                 # 健康检查间隔（秒）
+  data_timeout: 30             # 数据超时时间（秒）
+
+# 历史记录配置（价差历史数据记录和图表化）
+spread_history:
+  enabled: true              # 历史记录功能开关（默认关闭）
+  data_dir: "data/spread_history"  # 数据存储目录
+  
+  # 时间窗口采样配置
+  sampling:
+    interval_seconds: 60      # 采样间隔（秒），默认1分钟
+    strategy: "max"           # 采样策略：max(最大值), mean(平均值), latest(最新值)
+  
+  # 写入配置
+  write:
+    batch_size: 10            # 批量写入大小
+    batch_timeout: 60.0       # 批量写入超时（秒）
+    queue_maxsize: 500        # 写入队列最大大小
+  
+  # 存储配置
+  storage:
+    compress_after_days: 10   # 压缩天数（10天后压缩）
+    archive_after_days: 30    # 归档天数（30天后归档）
+    cleanup_interval_hours: 24 # 清理任务执行间隔（小时）
+
+debug_cli:
+  enabled: false
+  interval_seconds: 1.0

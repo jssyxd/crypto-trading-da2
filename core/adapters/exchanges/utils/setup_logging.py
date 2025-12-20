@@ -5,6 +5,7 @@
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
 from logging.handlers import RotatingFileHandler
@@ -31,6 +32,11 @@ class LoggingConfig:
     LOG_DIR = Path("logs")
     MAX_BYTES = 10 * 1024 * 1024  # 10MB
     BACKUP_COUNT = 5
+
+    # 环境变量控制：默认关闭控制台输出，需显式开启
+    ENV_ENABLE_CONSOLE_KEY = "ENABLE_CONSOLE_LOGS"
+    # 环境变量控制：可关闭文件输出以降低云端磁盘IO
+    ENV_ENABLE_FILE_KEY = "ENABLE_FILE_LOGS"
 
     # 格式化器类型
     FORMATTER_TYPES = {
@@ -67,16 +73,44 @@ class LoggingConfig:
         logger.handlers.clear()
 
         # 添加控制台handler
-        if console_formatter:
+        if console_formatter and cls._is_console_enabled():
             console_handler = cls._create_console_handler(console_formatter)
             logger.addHandler(console_handler)
 
         # 添加文件handler
-        if log_file:
+        if log_file and cls._is_file_enabled():
             file_handler = cls._create_file_handler(log_file, file_formatter)
             logger.addHandler(file_handler)
 
         return logger
+
+    @classmethod
+    def _is_console_enabled(cls) -> bool:
+        """
+        根据环境变量判断是否启用控制台日志。
+
+        默认关闭（减少终端抖动），仅当 ENABLE_CONSOLE_LOGS
+        被设置为 true/1/yes/on 时才启用。
+        """
+        flag = os.getenv(cls.ENV_ENABLE_CONSOLE_KEY)
+        if flag is None:
+            return False
+        normalized = flag.strip().lower()
+        return normalized in {"1", "true", "yes", "on"}
+
+    @classmethod
+    def _is_file_enabled(cls) -> bool:
+        """
+        根据环境变量判断是否启用文件日志。
+
+        默认开启，若在云端磁盘IO敏感环境下，可设置 ENABLE_FILE_LOGS=false
+        以关闭文件写入，仅保留（可选的）控制台输出。
+        """
+        flag = os.getenv(cls.ENV_ENABLE_FILE_KEY)
+        if flag is None:
+            return True
+        normalized = flag.strip().lower()
+        return normalized in {"1", "true", "yes", "on"}
 
     @classmethod
     def _create_console_handler(cls, formatter_type: str) -> logging.Handler:
@@ -148,13 +182,13 @@ class LoggingConfig:
             level=console_level
         )
 
-        # 价格日志（只输出到文件，不输出到控制台）
+        # 价格日志（只输出到文件，不输出到控制台；降到WARNING减少高频刷屏）
         price_logger = cls.setup_logger(
             'core.adapters.exchanges.adapters.lighter_websocket.price',
             log_file='ExchangeAdapter.log',
             console_formatter=None,  # 不输出到控制台
             file_formatter='detailed',
-            level=file_level
+            level=logging.WARNING
         )
 
         return ws_logger, rest_logger, price_logger
@@ -181,22 +215,22 @@ class LoggingConfig:
             level=console_level
         )
 
-        # 网格协调器
+        # 网格协调器（降低为WARNING且默认不打控制台，减少重复调度信息）
         coord_logger = cls.setup_logger(
             'core.services.grid.coordinator.grid_coordinator',
             log_file='core.services.grid.coordinator.grid_coordinator.log',
-            console_formatter=console_formatter,
+            console_formatter=None,
             file_formatter='detailed',
-            level=console_level
+            level=logging.WARNING
         )
 
-        # 健康检查
+        # 健康检查（降低为WARNING且默认不打控制台，避免高频心跳刷屏）
         health_logger = cls.setup_logger(
             'core.services.grid.implementations.order_health_checker',
             log_file='core.services.grid.implementations.order_health_checker.log',
-            console_formatter=console_formatter,
+            console_formatter=None,
             file_formatter='detailed',
-            level=console_level
+            level=logging.WARNING
         )
 
         return engine_logger, coord_logger, health_logger

@@ -84,6 +84,14 @@ class ScannerUI:
         self.total_markets: int = 0
         self.active_markets: int = 0
 
+        # 🔥 订阅统计（新增 - 帮助用户理解为什么部分代币不显示）
+        self.subscribed_count: int = 0    # 成功订阅的数量
+        self.failed_count: int = 0        # 订阅失败的数量
+        self.received_count: int = 0      # 收到数据的数量
+        
+        # 🔥 WebSocket重连统计
+        self.reconnect_count: int = 0     # 总重连次数（从启动后累计）
+
         # 设置日志捕获
         self._setup_log_capture()
 
@@ -191,7 +199,29 @@ class ScannerUI:
             running_time = "00:00:00"
 
         table.add_row("📊 运行时长", running_time)
-        table.add_row("🪙 监控市场数", f"{self.active_markets}/{self.total_markets}")
+        
+        # 🔥 WebSocket重连次数
+        table.add_row("🔄 WS重连次数", f"{self.reconnect_count}")
+        
+        # 🔥 订阅统计（改进 - 显示订阅详情）
+        if self.subscribed_count > 0:
+            # 显示详细的订阅统计
+            subscription_info = f"{self.received_count}/{self.subscribed_count}"
+            if self.failed_count > 0:
+                subscription_info += f" (失败{self.failed_count})"
+            table.add_row("🪙 监控市场数", subscription_info)
+            
+            # 如果收到数据的数量远小于订阅数量，显示提示
+            if self.received_count < self.subscribed_count * 0.7:
+                receive_ratio = self.received_count / self.subscribed_count * 100
+                table.add_row(
+                    "💡 提示",
+                    f"[yellow]{self.subscribed_count - self.received_count}个代币无交易活动 ({receive_ratio:.0f}%有数据)[/yellow]"
+                )
+        else:
+            # 兼容旧版本显示方式
+            table.add_row("🪙 监控市场数", f"{self.active_markets}/{self.total_markets}")
+        
         table.add_row("📈 有效结果数", f"{len(self.scan_results)}")
 
         # 最佳APR
@@ -236,6 +266,7 @@ class ScannerUI:
 
         # 如果没有数据，显示提示
         if not self.scan_results:
+            sorted_results = []  # 🔥 初始化空列表，避免后续引用错误
             table.add_row(
                 "[dim]--[/dim]",
                 "[dim]等待数据[/dim]",
@@ -248,8 +279,15 @@ class ScannerUI:
                 "[dim]--[/dim]"  # S持续时间列
             )
         else:
-            # 🔥 自定义排序：BTC永远第一，其他按APR排序
+            # 🔥 自定义排序：
+            # 1. 无交易活动的代币排最后
+            # 2. BTC永远第一（有交易活动的）
+            # 3. 其他有交易活动的代币按APR排序
             def sort_key(result):
+                # 无交易活动的代币排最后
+                if not result.has_trading_activity:
+                    return (-1, 0)  # 最低优先级
+                
                 # 检查是否为BTC（匹配 BTC, BTC-USD, BTCUSDT 等）
                 symbol_upper = result.symbol.upper()
                 is_btc = 'BTC' in symbol_upper and not any(
@@ -266,9 +304,35 @@ class ScannerUI:
                 self.scan_results,
                 key=sort_key,
                 reverse=True  # 从高到低
-            )[:50]  # 显示前50个
+            )  # 显示所有代币
 
             for rank, result in enumerate(sorted_results, 1):
+                # 🔥 检查是否有交易活动
+                if not result.has_trading_activity:
+                    # 无交易活动的代币 - 使用灰色显示
+                    rank_str = f"[dim]{rank}[/dim]"
+                    price_str = "[dim]等待数据[/dim]"
+                    cycles_str = "[dim]0/0.0[/dim]"
+                    recent_5min_str = "[dim]0[/dim]"
+                    apr_str = "[dim]0.00%[/dim]"
+                    volume_str = "[dim]$0[/dim]"
+                    rating_str = "[dim]⏸️ 无活动[/dim]"
+                    s_duration_display = "[dim]--[/dim]"
+                    
+                    table.add_row(
+                        rank_str,
+                        f"[dim]{result.symbol}[/dim]",
+                        price_str,
+                        cycles_str,
+                        recent_5min_str,
+                        apr_str,
+                        volume_str,
+                        rating_str,
+                        s_duration_display
+                    )
+                    continue
+                
+                # 有交易活动的代币 - 正常显示
                 # 排名样式
                 if rank == 1:
                     rank_str = "🥇"
@@ -332,7 +396,7 @@ class ScannerUI:
 
         return Panel(
             table,
-            title="🏆 代币波动率排行榜 (Top 50) - 按APR从高到低排序",
+            title=f"🏆 代币波动率排行榜 (共{len(sorted_results)}个) - 按APR从高到低排序",
             border_style="yellow"
         )
 
@@ -499,3 +563,25 @@ class ScannerUI:
         """
         self.total_markets = total_markets
         self.active_markets = active_markets
+    
+    def update_subscription_stats(self, subscribed: int, failed: int, received: int):
+        """
+        更新订阅统计信息（新增 - 帮助用户理解为什么部分代币不显示）
+        
+        Args:
+            subscribed: 成功订阅的数量
+            failed: 订阅失败的数量
+            received: 收到数据的数量
+        """
+        self.subscribed_count = subscribed
+        self.failed_count = failed
+        self.received_count = received
+    
+    def update_reconnect_count(self, reconnect_count: int):
+        """
+        更新WebSocket重连次数
+        
+        Args:
+            reconnect_count: 总重连次数（从启动后累计）
+        """
+        self.reconnect_count = reconnect_count

@@ -5,6 +5,13 @@
 通过双向挂单快速刷交易量
 """
 
+# 🔥 加载环境变量（必须在其他导入之前）
+from dotenv import load_dotenv
+from pathlib import Path
+env_path = Path(__file__).parent / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+
 from core.services.volume_maker.terminal_ui import VolumeMakerTerminalUI
 from core.services.volume_maker.models.volume_maker_config import VolumeMakerConfig
 from core.services.volume_maker.implementations.volume_maker_service_impl import VolumeMakerServiceImpl
@@ -13,7 +20,6 @@ from core.adapters.exchanges.factory import get_exchange_factory
 import asyncio
 import signal
 import sys
-from pathlib import Path
 from typing import Optional
 import yaml
 

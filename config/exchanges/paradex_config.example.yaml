@@ -1,0 +1,119 @@
+# Paradex 交易所配置文件示例
+#
+# 使用方法：
+# 1. 复制此文件为 paradex_config.yaml
+# 2. 填写你的真实 API 密钥
+# 3. paradex_config.yaml 不会被上传到 GitHub（已在 .gitignore 中）
+
+paradex:
+  # 基础配置
+  name: "Paradex"
+  exchange_type: "perpetual"
+  
+  # 网络配置
+  testnet: false
+  base_url: "https://api.prod.paradex.trade/v1"
+  ws_url: "wss://ws.api.prod.paradex.trade/v1"
+  
+  # ============================================================================
+  # 🔑 密钥配置
+  # ============================================================================
+  # 
+  # 📌 配置优先级：环境变量 > YAML配置 > 默认值
+  # 
+  # ⭐ 推荐：使用环境变量（更安全）
+  #   - 创建 .env 文件（参考 docs/ENV_CONFIG_TEMPLATE.md）
+  #   - 配置环境变量：
+  #       PARADEX_API_KEY="0x..."
+  #       PARADEX_L2_ADDRESS="0x..."
+  #       PARADEX_JWT_TOKEN="eyJ..."
+  #   - 下面的字段留空即可
+  # 
+  # 或：直接在 YAML 中配置（仅限测试环境）
+  # 
+  # ============================================================================
+  # 
+  # 🔐 使用模式（2选1）
+  # 
+  # 模式A：只读模式（仅查询，不交易）
+  #   - 只需填写 jwt_token
+  #   - 获取：https://app.paradex.trade/settings → API Keys → Create Read-only Token
+  # 
+  # 模式B：交易模式（完整功能）
+  #   - 必需：api_key + l2_address（从下载的 JSON 文件获取）
+  #   - 可选：jwt_token（建议也填写）
+  #   - 获取：https://app.paradex.trade/settings → API Keys → Create Trading Subkey
+  #   - JSON 文件包含：private_key（填入 api_key）、address（填入 l2_address）
+  # 
+  # ============================================================================
+  
+  # L2 私钥（用于订单签名，交易模式必需）
+  # 环境变量: PARADEX_API_KEY
+  api_key: ""              # JSON 文件中的 private_key (0x... 66字符)
+  
+  # 保留字段（Paradex 不使用）
+  api_secret: ""           # 留空
+  
+  # 额外参数
+  extra_params:
+    # JWT Token（只读或交易模式都可用）
+    # 环境变量: PARADEX_JWT_TOKEN
+    jwt_token: ""          # JWT Token 字符串
+    
+    # L2 地址（交易模式必需）
+    # 环境变量: PARADEX_L2_ADDRESS
+    l2_address: ""         # JSON 文件中的 address (0x... 66字符)
+    
+    # L1 / 钱包地址（交易模式推荐）
+    # 环境变量: PARADEX_WALLET_ADDRESS
+    wallet_address: ""      # 以太坊地址 (0x... 40/42字符)，用于SDK初始化
+  
+  # ============================================================================
+  # 其他配置（一般不需要修改）
+  # ============================================================================
+  
+  # 功能配置
+  enable_websocket: true
+  enable_auto_reconnect: true
+  enable_heartbeat: true
+  
+  # WebSocket配置
+  websocket:
+    ping_interval: 55
+    pong_timeout: 5
+    reconnect_delay: 5
+    max_reconnect_attempts: 10
+  
+  # 超时配置
+  connect_timeout: 30
+  request_timeout: 10
+  heartbeat_interval: 30
+  
+  # 重试配置
+  max_retry_attempts: 3
+  retry_delay: 1.0
+  
+  # 频率限制
+  rate_limits:
+    ticker:
+      max_requests: 100
+      time_window: 60
+    orderbook:
+      max_requests: 100
+      time_window: 60
+    trading:
+      max_requests: 20
+      time_window: 60
+  
+  # 交易配置
+  default_leverage: 1
+  default_margin_mode: "cross"
+  
+  # 符号映射
+  symbol_mapping:
+    "BTC/USDC:PERP": "BTC-USD-PERP"
+    "ETH/USDC:PERP": "ETH-USD-PERP"
+    "SOL/USDC:PERP": "SOL-USD-PERP"
+    "AVAX/USDC:PERP": "AVAX-USD-PERP"
+    "DOGE/USDC:PERP": "DOGE-USD-PERP"
+

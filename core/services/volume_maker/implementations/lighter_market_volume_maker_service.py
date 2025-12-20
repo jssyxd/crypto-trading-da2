@@ -85,11 +85,26 @@ class LighterMarketVolumeMakerService(IVolumeMakerService):
 
         # 🔥 最新订单簿数据（用于UI显示）
         self._latest_orderbook: Optional['OrderBookData'] = None
+        self._signal_orderbook: Optional['OrderBookData'] = None  # 信号源订单簿
+        self._execution_orderbook: Optional['OrderBookData'] = None  # 执行端订单簿
+        self._signal_orderbook_symbol: Optional[str] = None
+        self._execution_orderbook_symbol: Optional[str] = None
 
         # 🔥 最新余额数据（用于UI显示）
         self._latest_balance: Optional[Decimal] = None
         self._initial_balance: Optional[Decimal] = None  # 初始本金（程序启动时的余额）
         self._balance_currency: str = "USDC"  # 余额币种
+        
+        # 🔥 持仓数据（用于UI显示）
+        self._latest_position: Optional[Dict[str, Any]] = None  # 当前持仓
+        self._position_pnl: Decimal = Decimal("0")  # 持仓盈亏
+        self._position_pnl_change: Decimal = Decimal("0")  # 盈亏变化
+
+        # 🔥 自动重启控制
+        self._loss_restart_enabled: bool = False
+        self._loss_restart_threshold: int = 0
+        self._consecutive_losses: int = 0
+        self.restart_requested: bool = False
 
         # 🔥 WebSocket订单成交监控（基于client_id + 状态机）
         # 状态机：IDLE -> WAITING_OPEN -> POSITION_OPEN -> WAITING_CLOSE -> IDLE
@@ -116,6 +131,10 @@ class LighterMarketVolumeMakerService(IVolumeMakerService):
         """初始化刷量服务"""
         try:
             self.config = config
+            self._loss_restart_enabled = bool(getattr(self.config, "loss_restart_enabled", False))
+            self._loss_restart_threshold = int(getattr(self.config, "loss_restart_threshold", 0) or 0)
+            self._consecutive_losses = 0
+            self.restart_requested = False
 
             # 验证配置（必须是市价模式）
             if self.config.order_mode != 'market':
@@ -136,6 +155,13 @@ class LighterMarketVolumeMakerService(IVolumeMakerService):
             self.logger.info(
                 f"执行符号: {self.config.execution_symbol or self.config.symbol}")
             self.logger.info(f"订单大小: {self.config.order_size}")
+
+            if self._loss_restart_enabled and self._loss_restart_threshold > 0:
+                self.logger.info(
+                    f"🔁 连续亏损自动重启：已启用（阈值={self._loss_restart_threshold}次）"
+                )
+            else:
+                self.logger.info("🔁 连续亏损自动重启：未启用")
 
             # 🔥 反向交易模式提示
             if self.config.reverse_trading:
@@ -173,119 +199,139 @@ class LighterMarketVolumeMakerService(IVolumeMakerService):
             return False
 
     async def _setup_websocket_subscription(self):
-        """设置WebSocket订阅以监控订单成交"""
+        """设置WebSocket订阅以监控订单成交、持仓和订单簿"""
         try:
-            # 检查执行适配器是否有WebSocket模块
-            if not hasattr(self.execution_adapter, '_websocket'):
-                self.logger.warning("⚠️ Lighter适配器没有 _websocket 属性")
-                return
-
-            if not self.execution_adapter._websocket:
-                self.logger.warning("⚠️ Lighter适配器的 _websocket 为 None")
-                return
-
-            # 订阅订单成交
-            ws = self.execution_adapter._websocket
-            await ws.subscribe_order_fills(self._on_order_fill)
+            # 🔥 订阅订单更新（使用标准的 subscribe_user_data 方法，与网格系统一致）
+            await self.execution_adapter.subscribe_user_data(self._on_order_update)
+            self.logger.info("✅ 已订阅Lighter用户数据流（订单更新）")
             
-            # 🔥 订阅订单状态（检测滑点失败）
-            await ws.subscribe_orders(self._on_order_status)
+            # 🔥 订阅持仓更新
+            await self.execution_adapter.subscribe_positions(self._on_position_update)
+            self.logger.info("✅ 已订阅Lighter持仓更新")
             
-            self.logger.info("✅ 已启动Lighter订单成交和状态WebSocket订阅")
+            # 🔥 订阅执行端(Lighter)订单簿 - 优先使用市场索引避免符号转换问题
+            execution_symbol = self.config.execution_symbol or self.config.symbol
+            execution_market_index = None
+            try:
+                execution_market_index = self.execution_adapter.get_market_index(execution_symbol)
+            except Exception:
+                execution_market_index = None
+
+            subscribe_key = execution_market_index if execution_market_index is not None else execution_symbol
+            await self.execution_adapter.subscribe_orderbook(subscribe_key, self._on_execution_orderbook_update)
+
+            resolved_symbol = execution_symbol
+            if execution_market_index is not None:
+                markets_cache = getattr(self.execution_adapter, "_markets_cache", {})
+                resolved_symbol = markets_cache.get(execution_market_index, {}).get("symbol", execution_symbol)
+                self.logger.info(
+                    f"✅ 已订阅Lighter订单簿: {resolved_symbol} (market_index={execution_market_index})"
+                )
+            else:
+                self.logger.info(f"✅ 已订阅Lighter订单簿: {resolved_symbol}")
+
+            self._execution_orderbook_symbol = resolved_symbol
+            
+            # 🔥 订阅信号源订单簿 - 使用信号源符号格式
+            if hasattr(self.signal_adapter, 'subscribe_orderbook'):
+                signal_symbol = self.config.signal_symbol or self.config.symbol
+                await self.signal_adapter.subscribe_orderbook(signal_symbol, self._on_signal_orderbook_update)
+                self._signal_orderbook_symbol = signal_symbol
+                signal_name = self.signal_adapter.__class__.__name__.replace("Adapter", "")
+                self.logger.info(f"✅ 已订阅{signal_name}订单簿: {signal_symbol}")
 
         except Exception as e:
             self.logger.error(f"❌ 启动WebSocket订阅失败: {e}", exc_info=True)
             self.logger.warning("⚠️ 将使用fallback方案获取成交价")
 
-    async def _on_order_status(self, order: OrderData):
+    async def _on_order_update(self, update_data):
         """
-        订单状态回调（由WebSocket触发）
-        
-        🔥 关键功能：检测市价单挂单 = 滑点不足失败
+        订单更新回调（由WebSocket触发）- 与网格系统使用相同的接口
         
         Args:
-            order: 订单数据（包含状态）
+            update_data: OrderData对象或字典
         """
         try:
-            # 只处理OPEN状态的订单（挂单）
-            if order.status != OrderStatus.OPEN:
+            from core.adapters.exchanges.models import OrderData as ExchangeOrderData
+            
+            # 检测数据格式：Lighter推送OrderData对象
+            if not isinstance(update_data, ExchangeOrderData):
+                self.logger.debug(f"⏭️ 非OrderData对象，忽略: {type(update_data)}")
                 return
             
-            async with self._fill_lock:
-                # 如果不在等待状态，忽略
-                if self._fill_state not in ["WAITING_OPEN", "WAITING_CLOSE"]:
-                    return
-                
-                # 🔥 检测到市价单挂单 = 滑点不足
-                order_side = order.side.value.lower()
-                if order_side == self._expected_side:
-                    self.logger.warning(
-                        f"⚠️ 检测到市价单挂单（滑点不足）: "
-                        f"id={order.id}, 方向={order_side}, "
-                        f"价格={order.price}, 数量={order.amount}, "
-                        f"状态={order.status.value}"
-                    )
-                    
-                    # 标记挂单检测
-                    self._pending_order_detected = True
-                    
-                    # 触发挂单事件
-                    if self._pending_order_event:
-                        self._pending_order_event.set()
-        
-        except Exception as e:
-            self.logger.error(f"❌ 处理订单状态回调失败: {e}", exc_info=True)
-    
-    async def _on_order_fill(self, order: OrderData):
-        """
-        订单成交回调（由WebSocket触发）
+            order_id = str(update_data.id)
+            status = update_data.status.value.upper() if update_data.status else ""
+            
+            # 🔥 检测市价单挂单 = 滑点不足（只处理OPEN状态）
+            if status == "OPEN":
+                async with self._fill_lock:
+                    # 如果不在等待状态，忽略
+                    if self._fill_state not in ["WAITING_OPEN", "WAITING_CLOSE"]:
+                        return
 
-        🔥 优化逻辑：基于 client_id + 状态机匹配
-        - 优先通过 client_id 精确匹配
-        - 降级到方向和数量匹配（兼容旧逻辑）
-        - 累加成交直到满足期望数量
-        - 计算平均成交价格
+                    # 检查方向是否匹配
+                    order_side = update_data.side.value.lower()
+                    if order_side == self._expected_side:
+                        self.logger.warning(
+                            "⚠️ 检测到市价单挂单（滑点不足）: "
+                            f"id={order_id}, 方向={order_side}, "
+                            f"价格={update_data.price}, 数量={update_data.amount}"
+                        )
 
-        Args:
-            order: 成交的订单数据
-        """
-        try:
+                        # 标记挂单检测
+                        self._pending_order_detected = True
+
+                        # 触发挂单事件
+                        if self._pending_order_event:
+                            self._pending_order_event.set()
+                return
+            
+            # 🔥 处理订单成交（FILLED状态）
+            if status not in ["FILLED", "CLOSED"]:
+                return
+            
             async with self._fill_lock:
                 # 如果不在等待状态，忽略
                 if self._fill_state not in ["WAITING_OPEN", "WAITING_CLOSE"]:
                     return
 
                 # 🔥 优先通过 client_id 精确匹配
+                # 如果没有设置expected_client_id，说明已经处理过了（学习网格系统的去重机制）
+                if not self._expected_client_id:
+                    self.logger.debug(f"⏭️ 已处理过的订单，忽略重复推送: order_id={order_id}")
+                    return
+                
                 if self._expected_client_id:
-                    if order.client_id and order.client_id != self._expected_client_id:
+                    if update_data.client_id and str(update_data.client_id) != self._expected_client_id:
                         self.logger.debug(
                             f"⏭️ client_id 不匹配，忽略 - "
-                            f"期望: {self._expected_client_id}, 收到: {order.client_id}"
+                            f"期望: {self._expected_client_id}, 收到: {update_data.client_id}"
                         )
                         return
-                    elif order.client_id:
+                    elif update_data.client_id:
                         self.logger.info(
-                            f"✅ client_id 匹配: {order.client_id}"
+                            f"✅ client_id 匹配: {update_data.client_id}"
                         )
 
                 # 检查方向是否匹配
-                order_side = order.side.value.lower()  # "buy" or "sell"
+                order_side = update_data.side.value.lower()
                 if order_side != self._expected_side:
                     return
 
+                # 提取成交信息
+                filled_amount = update_data.filled if update_data.filled else update_data.amount
+                filled_price = update_data.average if update_data.average else update_data.price
+                
                 # 累加成交数量和成本
-                fill_amount = order.filled if order.filled else order.amount
-                fill_price = order.average if order.average else order.price
-
-                self._accumulated_amount += fill_amount
-                self._accumulated_cost += fill_amount * fill_price
+                self._accumulated_amount += filled_amount
+                self._accumulated_cost += filled_amount * filled_price
 
                 self.logger.info(
                     f"📨 WebSocket收到成交 - "
-                    f"client_id: {order.client_id or 'N/A'}, "
+                    f"client_id: {update_data.client_id or 'N/A'}, "
                     f"方向: {order_side}, "
-                    f"数量: {fill_amount}, "
-                    f"价格: {fill_price}, "
+                    f"数量: {filled_amount}, "
+                    f"价格: {filled_price}, "
                     f"累计: {self._accumulated_amount}/{self._expected_amount}"
                 )
 
@@ -298,13 +344,124 @@ class LighterMarketVolumeMakerService(IVolumeMakerService):
                         f"总数量: {self._accumulated_amount}, "
                         f"平均价格: {avg_price:.2f}"
                     )
+                    
+                    # 🔥 清除预期client_id，防止重复处理（学习网格系统的去重机制）
+                    self._expected_client_id = None
 
                     # 触发等待事件
                     if self._fill_event:
                         self._fill_event.set()
 
         except Exception as e:
-            self.logger.error(f"❌ 处理订单成交回调失败: {e}", exc_info=True)
+            self.logger.error(f"❌ 处理订单更新回调失败: {e}", exc_info=True)
+    
+    async def _on_position_update(self, position_data):
+        """
+        持仓更新回调（由WebSocket触发）
+        
+        Args:
+            position_data: 持仓数据（PositionData对象或字典）
+        """
+        try:
+            from core.adapters.exchanges.models import PositionData
+            
+            # 处理PositionData对象
+            if isinstance(position_data, PositionData):
+                position = position_data
+                
+                # 只处理当前交易对的持仓
+                if position.symbol == self.config.symbol:
+                    # 保存上一次的盈亏
+                    old_pnl = self._position_pnl
+                    
+                    # 更新持仓数据
+                    self._latest_position = {
+                        'symbol': position.symbol,
+                        'side': position.side.value if position.side else 'NONE',
+                        'size': float(position.size),
+                        'entry_price': float(position.entry_price) if position.entry_price else 0,
+                        'mark_price': float(position.mark_price) if position.mark_price else 0,
+                        'unrealized_pnl': float(position.unrealized_pnl),
+                        'leverage': float(position.leverage) if position.leverage else 1,
+                    }
+                    
+                    self._position_pnl = Decimal(str(position.unrealized_pnl))
+                    self._position_pnl_change = self._position_pnl - old_pnl
+                    
+                    self.logger.debug(
+                        f"💼 持仓更新: {position.symbol} "
+                        f"{position.side.value if position.side else 'NONE'} "
+                        f"{position.size}, "
+                        f"未实现盈亏: ${self._position_pnl:.2f} "
+                        f"({'+'if self._position_pnl_change >= 0 else ''}{self._position_pnl_change:.2f})"
+                    )
+            
+            # 处理字典格式
+            elif isinstance(position_data, dict):
+                symbol = position_data.get('symbol', '')
+                if symbol == self.config.symbol:
+                    old_pnl = self._position_pnl
+                    self._latest_position = position_data
+                    self._position_pnl = Decimal(str(position_data.get('unrealized_pnl', 0)))
+                    self._position_pnl_change = self._position_pnl - old_pnl
+                    
+        except Exception as e:
+            self.logger.error(f"❌ 处理持仓更新回调失败: {e}", exc_info=True)
+    
+    async def _on_execution_orderbook_update(self, *args):
+        """
+        执行端订单簿更新回调
+        
+        支持以下触发方式：
+            1. callback(orderbook)
+            2. callback(symbol, orderbook)
+        """
+        try:
+            if not args:
+                return
+
+            if len(args) == 1:
+                orderbook = args[0]
+                symbol = getattr(orderbook, "symbol", None) or self._execution_orderbook_symbol
+            else:
+                symbol, orderbook = args[0], args[1]
+
+            if orderbook is None:
+                return
+
+            self._execution_orderbook = orderbook
+            # 更新主订单簿（用于兼容现有逻辑）
+            self._latest_orderbook = orderbook
+            self.logger.debug(f"📖 Lighter订单簿更新: {symbol or 'N/A'}")
+        except Exception as e:
+            self.logger.error(f"❌ 处理执行端订单簿更新失败: {e}", exc_info=True)
+    
+    async def _on_signal_orderbook_update(self, *args):
+        """
+        信号源订单簿更新回调（兼容单参/双参）
+        """
+        try:
+            if not args:
+                return
+
+            if len(args) == 1:
+                orderbook = args[0]
+                symbol = getattr(orderbook, "symbol", None) or self._signal_orderbook_symbol
+            else:
+                symbol, orderbook = args[0], args[1]
+
+            if orderbook is None:
+                return
+
+            self._signal_orderbook = orderbook
+            signal_name = self.signal_adapter.__class__.__name__.replace("Adapter", "")
+            self.logger.debug(f"📖 {signal_name}订单簿更新: {symbol or 'N/A'}")
+        except Exception as e:
+            self.logger.error(f"❌ 处理信号源订单簿更新失败: {e}", exc_info=True)
+
+    def _resolve_execution_orderbook_symbol(self, preferred_symbol: Optional[str]) -> str:
+        """保留旧方法，兼容外部调用"""
+        return preferred_symbol or self.config.symbol
 
     def _prepare_fill_tracking(self, side: str, amount: Decimal, state: str, client_id: Optional[str] = None):
         """
@@ -1079,18 +1236,64 @@ class LighterMarketVolumeMakerService(IVolumeMakerService):
         self.logger.info(
             f"━━━━━━ 第 {cycle_id} 轮结束 - {result.status.value} ━━━━━━\n")
 
-    async def _check_execution_balance(self) -> bool:
-        """检查Lighter余额"""
-        try:
-            balance = await self.execution_adapter.get_account_balance()
+        self._evaluate_loss_restart(result)
 
-            # 查找USDC或USD余额
+    def _evaluate_loss_restart(self, result: CycleResult) -> None:
+        """根据连续亏损配置判断是否需要重启"""
+        if not self._loss_restart_enabled or self._loss_restart_threshold <= 0:
+            return
+
+        if result.status == CycleStatus.SUCCESS and result.pnl < Decimal("0"):
+            self._consecutive_losses += 1
+            self.logger.warning(
+                f"📉 本轮亏损，连续亏损次数: {self._consecutive_losses}/{self._loss_restart_threshold}"
+            )
+        else:
+            if self._consecutive_losses > 0:
+                self.logger.info("📈 盈利或持平，连续亏损计数已重置")
+            self._consecutive_losses = 0
+
+        if self._consecutive_losses >= self._loss_restart_threshold and not self.restart_requested:
+            self.logger.error(
+                f"🚨 连续亏损已达阈值({self._loss_restart_threshold})，请求自动重启脚本"
+            )
+            self.restart_requested = True
+            self._should_stop = True
+
+    async def _check_execution_balance(self) -> bool:
+        """检查Lighter余额（优先使用WebSocket缓存）"""
+        try:
             usdc_balance = None
-            for bal in balance:
-                if bal.currency.upper() in ['USDC', 'USD', 'USDT']:
-                    usdc_balance = bal.free
-                    self._balance_currency = bal.currency.upper()  # 🔥 更新币种
-                    break
+            data_source = "未知"
+            
+            # 🔥 优先使用 WebSocket 缓存（与网格系统一致）
+            if hasattr(self.execution_adapter, '_balance_cache'):
+                from datetime import datetime
+                cached_balance = self.execution_adapter._balance_cache.get('USDC')
+                if cached_balance:
+                    cache_age = (datetime.now() - cached_balance['timestamp']).total_seconds()
+                    # 缓存在180秒内有效
+                    if cache_age < 180:
+                        usdc_balance = cached_balance['free']
+                        data_source = f"WebSocket缓存(age={cache_age:.1f}s)"
+                        self._balance_currency = 'USDC'
+                        
+                        self.logger.debug(
+                            f"💰 [余额] WS缓存: USDC "
+                            f"可用=${usdc_balance:,.2f}, 缓存年龄={cache_age:.1f}秒"
+                        )
+            
+            # 缓存失效或不存在，调用 REST API
+            if usdc_balance is None:
+                balance = await self.execution_adapter.get_account_balance()
+                data_source = "REST API"
+
+                # 查找USDC或USD余额
+                for bal in balance:
+                    if bal.currency.upper() in ['USDC', 'USD', 'USDT']:
+                        usdc_balance = bal.free
+                        self._balance_currency = bal.currency.upper()
+                        break
 
             if usdc_balance is None:
                 self.logger.warning("⚠️ 未找到USDC余额")
@@ -1103,7 +1306,7 @@ class LighterMarketVolumeMakerService(IVolumeMakerService):
             if self._initial_balance is None:
                 self._initial_balance = usdc_balance
                 self.logger.info(
-                    f"💰 记录初始本金: {self._initial_balance:.2f} {self._balance_currency}")
+                    f"💰 记录初始本金: {self._initial_balance:.2f} {self._balance_currency} (来源: {data_source})")
 
             if self.config.min_balance is not None and usdc_balance < Decimal(str(self.config.min_balance)):
                 self.logger.error(

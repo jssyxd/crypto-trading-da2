@@ -76,6 +76,30 @@ class HyperliquidAdapter(ExchangeAdapter):
         self._rest.logger = self.logger  # 直接设置logger
         self._websocket.logger = self.logger  # 直接设置logger
 
+        # 共享缓存：让REST/WS/Adapter对同一份数据进行更新，供UI/执行器读取
+        shared_position_cache: Dict[str, Dict[str, Any]] = {}
+        shared_order_cache: Dict[str, OrderData] = {}
+        shared_balance_cache: Dict[str, Dict[str, Any]] = {}
+
+        self._position_cache = shared_position_cache
+        self._order_cache = shared_order_cache
+        self._balance_cache = shared_balance_cache
+
+        setattr(self._rest, "_position_cache", shared_position_cache)
+        setattr(self._rest, "_order_cache", shared_order_cache)
+        setattr(self._rest, "_balance_cache", shared_balance_cache)
+        setattr(self._websocket, "_position_cache", shared_position_cache)
+        setattr(self._websocket, "_order_cache", shared_order_cache)
+        setattr(self._websocket, "_balance_cache", shared_balance_cache)
+
+        # 内部回调 & 任务
+        self._position_callbacks: List[Callable[[Dict[str, Any]], Any]] = []
+        self._position_refresh_lock = asyncio.Lock()
+
+        # 监听 base 层的扩展回调（WS 推送会统一走这里）
+        self._base.register_callback('order', self._handle_order_stream_payload)
+        self._base.register_callback('balance', self._handle_balance_payload)
+
         # WebSocket事件回调映射
         self._ws_callbacks = {
             'ticker': [],
@@ -164,20 +188,15 @@ class HyperliquidAdapter(ExchangeAdapter):
             websocket_config = hyperliquid_config.get('websocket', {})
             implementation = websocket_config.get('implementation', 'native')
 
-            # 🔥 强制输出日志，确保能看到
-            print(f"🔥 Hyperliquid WebSocket实现选择: {implementation}")
-
             if implementation == 'native':
                 from .hyperliquid_websocket_native import HyperliquidNativeWebSocket
                 websocket_instance = HyperliquidNativeWebSocket(
                     config, self._base)
-                print("🔥 ✅ 创建原生WebSocket实例 (零延迟)")
                 if self.logger:
                     self.logger.info("✅ 使用原生WebSocket实现 (零延迟)")
             elif implementation == 'ccxt':
                 from .hyperliquid_websocket import HyperliquidWebSocket
                 websocket_instance = HyperliquidWebSocket(config, self._base)
-                print("🔥 ✅ 创建ccxt WebSocket实例 (稳定)")
                 if self.logger:
                     self.logger.info("✅ 使用ccxt WebSocket实现 (稳定)")
             else:
@@ -185,7 +204,6 @@ class HyperliquidAdapter(ExchangeAdapter):
                 from .hyperliquid_websocket_native import HyperliquidNativeWebSocket
                 websocket_instance = HyperliquidNativeWebSocket(
                     config, self._base)
-                print(f"🔥 ⚠️ 未知实现{implementation}，使用默认原生实现")
                 if self.logger:
                     self.logger.warning(
                         f"未知的WebSocket实现: {implementation}，使用默认的原生实现")
@@ -193,7 +211,6 @@ class HyperliquidAdapter(ExchangeAdapter):
             return websocket_instance
 
         except Exception as e:
-            print(f"🔥 ❌ 创建WebSocket实例失败: {e}")
             if self.logger:
                 self.logger.error(f"创建WebSocket实例失败: {e}")
             # 降级到ccxt实现
@@ -232,6 +249,17 @@ class HyperliquidAdapter(ExchangeAdapter):
                 if self.logger:
                     self.logger.error("WebSocket连接失败")
                 return False
+
+            # ⚙️  初始化内部订阅：监听订单流用于缓存/回调
+            if hasattr(self._websocket, 'subscribe_order_fills'):
+                try:
+                    await self._websocket.subscribe_order_fills(self._handle_internal_order_fill)
+                except Exception as exc:
+                    if self.logger:
+                        self.logger.warning(f"⚠️ 注册内部订单回调失败: {exc}")
+
+            # 缓存一次初始持仓（避免UI显示为空）
+            await self._refresh_positions_from_rest()
 
             if self.logger:
                 self.logger.info(
@@ -425,6 +453,122 @@ class HyperliquidAdapter(ExchangeAdapter):
         except Exception:
             pass
 
+    # ------------------------------------------------------------------ #
+    # 内部缓存 & 回调处理
+    # ------------------------------------------------------------------ #
+
+    async def _handle_internal_order_fill(self, order: OrderData) -> None:
+        """
+        WebSocket 订单事件：更新缓存并同步持仓
+        """
+        if not order or not order.id:
+            return
+
+        # 缓存订单结果（包含 client_id，方便执行器查询）
+        self._order_cache[str(order.id)] = order
+        if order.client_id:
+            self._order_cache[str(order.client_id)] = order
+
+        # 仅在成交或取消时刷新持仓，确保UI及时同步
+        if order.status in (OrderStatus.FILLED, OrderStatus.CANCELED):
+            await self._refresh_positions_from_rest([order.symbol])
+
+    async def _handle_order_stream_payload(self, payload: Any) -> None:
+        """
+        处理 base.extended_data_callback('order', payload) 推送的原始订单列表
+        """
+        if not payload:
+            return
+
+        # payload 可能是列表或单个字典
+        orders = payload if isinstance(payload, list) else [payload]
+
+        for order_dict in orders:
+            symbol = order_dict.get('symbol') or order_dict.get('info', {}).get('symbol')
+            if not symbol:
+                continue
+            parsed = self._rest._parse_order(order_dict, symbol)  # 使用REST解析，确保格式一致
+            if parsed:
+                await self._handle_internal_order_fill(parsed)
+
+    async def _handle_balance_payload(self, payload: Any) -> None:
+        """
+        处理 base.extended_data_callback('balance', payload) 推送的余额数据
+        """
+        if not payload:
+            return
+
+        try:
+            if isinstance(payload, dict):
+                currency = payload.get('currency') or payload.get('symbol')
+                if currency:
+                    self._balance_cache[currency] = payload
+        except Exception as exc:
+            if self.logger:
+                self.logger.warning(f"⚠️ 处理余额推送失败: {exc}")
+
+    async def _refresh_positions_from_rest(self, symbols: Optional[List[str]] = None) -> None:
+        """
+        从REST接口刷新持仓缓存（在Hyperliquid缺少WS推送时使用）
+        """
+        async with self._position_refresh_lock:
+            try:
+                positions = await self._rest.get_positions(symbols)
+            except Exception as exc:
+                if self.logger:
+                    self.logger.warning(f"⚠️ 无法刷新Hyperliquid持仓: {exc}")
+                return
+
+            # 收集已更新符号，用于清理不存在的缓存
+            updated_symbols = set()
+
+            for pos in positions:
+                entry = self._position_data_to_cache_entry(pos)
+                updated_symbols.add(pos.symbol)
+                self._position_cache[pos.symbol] = entry
+
+            if symbols:
+                for symbol in symbols:
+                    if symbol not in updated_symbols:
+                        self._position_cache.pop(symbol, None)
+
+            await self._emit_position_callbacks()
+
+    async def _emit_position_callbacks(self) -> None:
+        """通知所有注册的持仓回调（如果有的话）"""
+        if not self._position_callbacks:
+            return
+
+        snapshot = dict(self._position_cache)
+        for callback in self._position_callbacks:
+            try:
+                if asyncio.iscoroutinefunction(callback):
+                    await callback(snapshot)
+                else:
+                    callback(snapshot)
+            except Exception as exc:
+                if self.logger:
+                    self.logger.warning(f"⚠️ 持仓回调执行失败: {exc}")
+
+    def _position_data_to_cache_entry(self, position: PositionData) -> Dict[str, Any]:
+        """将 PositionData 转换为 UI 期望的缓存格式"""
+        if not position:
+            return {}
+
+        signed_size = position.size or Decimal('0')
+        if position.side == PositionSide.SHORT:
+            signed_size = -signed_size
+
+        entry_price = position.entry_price or Decimal('0')
+
+        return {
+            "symbol": position.symbol,
+            "size": float(signed_size),
+            "side": position.side.value if position.side else ("long" if signed_size >= 0 else "short"),
+            "entry_price": float(entry_price),
+            "timestamp": position.timestamp or datetime.now(),
+        }
+
     async def get_positions(self, symbols: Optional[List[str]] = None) -> List[PositionData]:
         """获取持仓信息"""
         return await self._rest.get_positions(symbols)
@@ -519,8 +663,9 @@ class HyperliquidAdapter(ExchangeAdapter):
         try:
             # 包装回调函数
             wrapped_callback = self._wrap_orderbook_callback(callback)
-            self._ws_callbacks['orderbook'].append(
-                (symbol, callback, wrapped_callback))
+            callback_entry = (symbol, callback, wrapped_callback)
+            self._ws_callbacks['orderbook'].append(callback_entry)
+            self._base.register_callback('orderbook', callback_entry)
 
             # 通过WebSocket订阅
             await self._websocket.subscribe_orderbook(symbol, wrapped_callback)
@@ -562,11 +707,6 @@ class HyperliquidAdapter(ExchangeAdapter):
             self._ws_callbacks['user_data'].append(
                 ('', callback, wrapped_callback))
 
-            # 🔍 强制终端输出 + 日志
-            print(f"\n{'='*80}", flush=True)
-            print(f"[SUBSCRIBE-DEBUG] 🔄 准备订阅WebSocket用户数据...", flush=True)
-            print(f"{'='*80}\n", flush=True)
-
             if self.logger:
                 self.logger.info("[SUBSCRIBE-DEBUG] 🔄 准备订阅WebSocket用户数据...")
 
@@ -575,19 +715,11 @@ class HyperliquidAdapter(ExchangeAdapter):
             # 原始callback只需要1个参数(user_data)，直接传递即可
             await self._websocket.subscribe_user_data(callback)
 
-            print(f"[SUBSCRIBE-DEBUG] ✅ WebSocket用户数据订阅成功\n", flush=True)
             if self.logger:
                 self.logger.info("[SUBSCRIBE-DEBUG] ✅ WebSocket用户数据订阅成功")
 
         except Exception as e:
             import traceback
-            print(f"\n{'='*80}", flush=True)
-            print(f"[SUBSCRIBE-DEBUG] ❌ 订阅用户数据失败: {e}", flush=True)
-            print(
-                f"[SUBSCRIBE-DEBUG] 错误堆栈:\n{traceback.format_exc()}", flush=True)
-            print(f"[SUBSCRIBE-DEBUG] ⚠️  降级为REST轮询模式（每2秒轮询一次）", flush=True)
-            print(f"{'='*80}\n", flush=True)
-
             if self.logger:
                 self.logger.error(f"❌ [SUBSCRIBE-DEBUG] 订阅用户数据失败: {e}")
                 self.logger.error(
@@ -797,8 +929,9 @@ class HyperliquidAdapter(ExchangeAdapter):
 
             # 批量添加到回调列表
             for symbol in filtered_symbols:
-                self._ws_callbacks['orderbook'].append(
-                    (symbol, callback, wrapped_callback))
+                callback_entry = (symbol, callback, wrapped_callback)
+                self._ws_callbacks['orderbook'].append(callback_entry)
+                self._base.register_callback('orderbook', callback_entry)
 
             # 将订阅添加到管理器
             for symbol in filtered_symbols:
@@ -1070,12 +1203,6 @@ class HyperliquidAdapter(ExchangeAdapter):
 
     async def _start_user_data_polling(self, callback: Callable[[Dict[str, Any]], None]) -> None:
         """启动用户数据轮询模式"""
-        print(f"\n{'='*80}", flush=True)
-        print(f"⚠️  [POLLING-MODE] 启动REST轮询模式（WebSocket未启用）", flush=True)
-        print(f"[POLLING-MODE] 轮询间隔: 2秒", flush=True)
-        print(f"[POLLING-MODE] 限制: 只能检测当前挂单，无法实时捕获成交瞬间", flush=True)
-        print(f"{'='*80}\n", flush=True)
-
         if self.logger:
             self.logger.warning("⚠️  [POLLING-MODE] 启动REST轮询模式（WebSocket未启用）")
             self.logger.warning("[POLLING-MODE] 轮询间隔: 2秒")

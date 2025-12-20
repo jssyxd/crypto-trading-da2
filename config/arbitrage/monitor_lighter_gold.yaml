@@ -1,0 +1,59 @@
+# ============================================================================
+# Lighter 黄金套利监控配置（PAXG ↔ XAU 多腿套利专用）
+# ============================================================================
+# 
+# 用途: Lighter 交易所内 PAXG ↔ XAU 同所多腿套利
+# 启动: python main_unified.py --monitor-config config/arbitrage/monitor_lighter_gold.yaml
+# ============================================================================
+
+# 交易所配置（仅 Lighter）
+exchanges:
+  - lighter
+
+# 监控的交易对（空列表，仅依赖 extra_symbols.yaml）
+# 💡 不需要在这里配置 PAXG 和 XAU，它们通过 extra_symbols.yaml 自动订阅
+symbols: []
+
+# 套利阈值配置
+thresholds:
+  min_spread_pct: 0.01          # 最小价差百分比（0.01%）
+  min_funding_rate_diff: 0.01   # 最小资金费率差异（0.01%）
+
+# WebSocket配置
+websocket:
+  ping_interval: 30             # 心跳间隔（秒）
+  reconnect_delay: 5            # 重连延迟（秒）
+  max_reconnect_attempts: 50000 # 最大重连次数
+
+# 性能配置
+performance:
+  analysis_interval_ms: 10      # 分析间隔（毫秒）
+  ui_refresh_interval_ms: 1000  # UI刷新间隔（毫秒）
+
+# 健康检查配置
+health_check:
+  interval: 10                  # 健康检查间隔（秒）
+  data_timeout: 30              # 数据超时时间（秒）
+
+# 历史记录配置（价差历史数据记录和图表化）
+spread_history:
+  enabled: false                # 测试阶段关闭历史记录
+  data_dir: "data/spread_history"
+  
+  # 时间窗口采样配置
+  sampling:
+    interval_seconds: 60        # 采样间隔（秒）
+    strategy: "max"             # 采样策略：max(最大值), mean(平均值), latest(最新值)
+  
+  # 写入配置
+  write:
+    batch_size: 10              # 批量写入大小
+    batch_timeout: 60.0         # 批量写入超时（秒）
+    queue_maxsize: 500          # 写入队列最大大小
+  
+  # 存储配置
+  storage:
+    compress_after_days: 10     # 压缩天数
+    archive_after_days: 30      # 归档天数
+    cleanup_interval_hours: 24  # 清理任务执行间隔（小时）
+

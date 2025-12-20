@@ -1,0 +1,86 @@
+# ====================================
+# Binance交易所配置文件
+# ====================================
+# 用于价格监控报警系统
+
+binance:
+  # API连接配置
+  api:
+    base_url: https://api.binance.com        # REST API基础URL
+    ws_url: wss://stream.binance.com:9443    # WebSocket URL
+    timeout: 30                              # API请求超时时间(秒)
+    version: v3                              # API版本
+  
+  # 认证配置（价格监控不需要API密钥，只用于公开数据）
+  authentication:
+    api_key: ''                              # API密钥（留空即可）
+    api_secret: ''                           # API密钥（留空即可）
+  
+  # 交易所信息
+  exchange_id: binance
+  name: Binance
+  enabled: true
+  
+  # 市场配置
+  markets:
+    spot:
+      enabled: true                          # 启用现货市场
+    perpetual:
+      enabled: true                          # 启用永续合约市场
+  
+  # WebSocket配置
+  websocket:
+    enabled: true
+    auto_reconnect: true                     # 是否自动重连
+    max_reconnect_attempts: 5                # 最大重连尝试次数
+    reconnect_delay: 5                       # 重连延迟(秒)
+    ping_interval: 30                        # Ping间隔(秒)
+    ping_timeout: 10                         # Ping超时(秒)
+  
+  # 错误处理
+  error_handling:
+    max_retries: 3                           # 最大重试次数
+    retry_delay: 1                           # 重试延迟(秒)
+    retry_backoff: 2                         # 重试退避倍数
+  
+  # 速率限制
+  rate_limits:
+    requests_per_second: 10                  # 每秒请求数限制
+    requests_per_minute: 1200                # 每分钟请求数限制
+    weight_per_minute: 1200                  # 每分钟权重限制
+  
+  # 符号列表（常用交易对）
+  symbols:
+    spot:
+      - BTC/USDT                             # BTC现货
+      - ETH/USDT                             # ETH现货
+      - SOL/USDT                             # SOL现货
+      - BNB/USDT                             # BNB现货
+      - ADA/USDT                             # ADA现货
+      - DOGE/USDT                            # DOGE现货
+      - XRP/USDT                             # XRP现货
+      - AVAX/USDT                            # AVAX现货
+    
+    perpetual:
+      - BTC/USDT:USDT                        # BTC永续合约
+      - ETH/USDT:USDT                        # ETH永续合约
+      - SOL/USDT:USDT                        # SOL永续合约
+      - BNB/USDT:USDT                        # BNB永续合约
+  
+  # 精度配置
+  precision:
+    BTC/USDT:
+      amount: 5
+      price: 2
+    ETH/USDT:
+      amount: 4
+      price: 2
+    SOL/USDT:
+      amount: 2
+      price: 3
+  
+  # 费率配置
+  fees:
+    maker: 0.001                             # Maker费率 0.1%
+    taker: 0.001                             # Taker费率 0.1%
+

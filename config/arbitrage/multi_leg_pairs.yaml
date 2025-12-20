@@ -1,0 +1,46 @@
+pairs:
+  # ============================================================================
+  # Lighter 同交易所 PAXG ↔ XAU 套利（黄金现货代币 vs RWA黄金）
+  # ============================================================================
+  - id: "LIGHTER_PAXG_XAU"
+    description: "Lighter 同所黄金套利：PAXG(加密) ↔ XAU(RWA)"
+    leg_primary:
+      exchange: "lighter"
+      symbol: "PAXG-USD-PERP"
+    leg_secondary:
+      exchange: "lighter"
+      symbol: "XAU-USD-PERP"
+    allow_reverse: true  # 允许双向套利（PAXG→XAU 或 XAU→PAXG）
+    min_spread_pct: 0.01  # 最小价差 0.01%（根据实际情况调整）
+    enabled: false  # ✅ 已启用
+
+  # ============================================================================
+  # 跨交易所 PAXG ↔ XAU 套利（预留，默认禁用）
+  # ============================================================================
+  - id: "EDGEX_PAXG_VS_LIGHTER_XAU"
+    description: "跨所黄金套利：EdgeX PAXG ↔ Lighter XAU"
+    leg_primary:
+      exchange: "edgex"
+      symbol: "PAXG-USDC-PERP"
+    leg_secondary:
+      exchange: "lighter"
+      symbol: "XAU-USD-PERP"
+    allow_reverse: true
+    min_spread_pct: 0.01
+    enabled: false  # ⏸️ 默认禁用（需要时手动启用）
+
+  # ============================================================================
+  # Lighter 同交易所 ETH 现货 ↔ 合约套利
+  # ============================================================================
+  - id: "LIGHTER_ETH_SPOT_PERP"
+    description: "Lighter 同所ETH套利：ETH现货(SPOT) ↔ ETH合约(PERP)"
+    leg_primary:
+      exchange: "lighter"
+      symbol: "ETH-USDC-SPOT"  # 标准现货格式（系统会自动转换为 ETH/USDC）
+    leg_secondary:
+      exchange: "lighter"
+      symbol: "ETH-USDC-PERP"  # 标准合约格式（系统会自动转换为 ETH）
+    allow_reverse: true        # 允许双向套利（现货→合约 或 合约→现货）
+    min_spread_pct: 0.01       # 最小价差 0.02%（根据实际情况调整）
+    enabled: true              # ✅ 已启用
+
